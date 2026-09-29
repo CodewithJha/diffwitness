@@ -5,6 +5,12 @@
   "type": "module",
   "description": "DiffWitness: detect behavioral changes that tests and Git diffs can miss. Repo root; deploys the hosted demo from packages/diffwitness.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodewithJha/diffwitness.git"
+  },
+  "homepage": "https://github.com/CodewithJha/diffwitness#readme",
+  "bugs": "https://github.com/CodewithJha/diffwitness/issues",
   "engines": {
     "node": ">=20"
   },

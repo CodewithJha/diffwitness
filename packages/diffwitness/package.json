@@ -14,6 +14,13 @@
     "git"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodewithJha/diffwitness.git",
+    "directory": "packages/diffwitness"
+  },
+  "homepage": "https://github.com/CodewithJha/diffwitness#readme",
+  "bugs": "https://github.com/CodewithJha/diffwitness/issues",
   "engines": {
     "node": ">=20"
   },
