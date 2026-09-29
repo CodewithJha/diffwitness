@@ -106,6 +106,23 @@ describe("hosted HTTP API (validation + security)", () => {
     assert.match(await res.text(), /Causality: not established/);
   });
 
+  it("page stays CSP-compatible: no inline code, no HTML sinks, result anchors present", async () => {
+    const html = await (await fetch(`${server.baseUrl}/`)).text();
+    const js = (await (await fetch(`${server.baseUrl}/app.js`)).text())
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "");
+    assert.doesNotMatch(html, /<script(?![^>]*\bsrc="\/app\.js")[^>]*>/, "only the external app.js script");
+    assert.doesNotMatch(html, /<style|\sstyle="|\son[a-z]+="/i, "no inline styles or handlers");
+    assert.doesNotMatch(html, /https?:\/\/(?!www\.w3\.org)/, "no external origins");
+    assert.doesNotMatch(js, /innerHTML|outerHTML|insertAdjacentHTML|document\.write|\beval\(|new Function/);
+    assert.doesNotMatch(js, /setAttribute\(\s*["']style["']/);
+    for (const id of ["run", "run-status", "verdict", "num-before", "num-after", "findings-list", "evidence-list", "surface-files", "git-diff", "failure"]) {
+      assert.match(html, new RegExp(`id="${id}"`), id);
+    }
+    assert.match(html, /id="run-status"[^>]*aria-live="polite"/);
+    assert.match(html, /id="failure"[^>]*role="alert"/);
+  });
+
   it("serves only allowlisted static assets; traversal-looking paths are 404", async () => {
     for (const p of ["/app.js", "/styles.css", "/index.html"]) {
       assert.equal((await fetch(`${server.baseUrl}${p}`)).status, 200, p);
