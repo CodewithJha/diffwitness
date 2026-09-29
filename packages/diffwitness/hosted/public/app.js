@@ -500,62 +500,116 @@ function renderTechnical(result) {
   renderStageTrace(result.stages);
 }
 
-function renderFailure(result, fallbackMessage) {
+/* ── Failure ────────────────────────────────────────────────────────────── */
+
+function renderFailure(result, fallbackMessage, retryAfter) {
   const box = $("failure");
   const failure = result && result.failure;
-  if (!failure && !fallbackMessage) { box.hidden = true; return; }
+  if (!failure && !fallbackMessage) {
+    box.hidden = true;
+    return;
+  }
   box.hidden = false;
-  box.replaceChildren(
+  const detail = failure
+    ? `${failure.message}${failure.stage ? ` (stage: ${failure.stage})` : ""}`
+    : fallbackMessage;
+  const parts = [
+    el("p", { className: "micro", text: "Fault" }),
     el("strong", { text: failure ? `Demo failed: ${failure.kind}` : "Request failed" }),
-    document.createTextNode(
-      failure ? ` — ${failure.message}${failure.stage ? ` (stage: ${failure.stage})` : ""}` : ` — ${fallbackMessage}`,
-    ),
-  );
+    el("span", { text: ` — ${detail}` }),
+  ];
+  if (retryAfter) parts.push(el("span", { className: "failure-retry", text: ` Retry in about ${retryAfter} s.` }));
+  box.replaceChildren(...parts);
+  setRunState("error");
+  $("verdict").textContent = failure ? "Run failed" : "Request failed";
+  $("readout-key").textContent = failure ? failure.kind : detail;
+}
+
+/* ── Staged reveal ──────────────────────────────────────────────────────── */
+
+function stageReveal() {
+  const root = document.body;
+  root.classList.remove("is-revealing");
+  if (reducedMotion.matches) return;
+  void root.offsetWidth;
+  root.classList.add("is-revealing");
+}
+
+/* ── Run ────────────────────────────────────────────────────────────────── */
+
+async function requestDemo() {
+  const response = await fetch("/api/demo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ scenario: SCENARIO_ID }),
+  });
+  const body = await response.json().catch(() => null);
+  return { response, body };
 }
 
 async function run() {
   setBusy(true);
+  setRunState("running");
+  $("verdict").textContent = "Measuring…";
   $("run-status").textContent = "Running baseline → change → check → explain with the real CLI…";
+  document.body.classList.remove("is-revealing");
   renderFailure(null, null);
+  resetReadout();
+  resetChain();
+
   let result = null;
   try {
-    const response = await fetch("/api/demo", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ scenario: SCENARIO_ID }),
-    });
-    const body = await response.json().catch(() => null);
+    const { response, body } = await requestDemo();
     if (body && Array.isArray(body.stages)) {
       result = body;
     } else {
-      renderFailure(null, body && body.error ? body.error.message : `HTTP ${response.status}`);
-      $("run-status").textContent = "";
+      const retryAfter = response.status === 503 ? response.headers.get("Retry-After") : null;
+      setBusy(false);
+      $("results").hidden = true;
+      renderFailure(null, body && body.error ? body.error.message : `HTTP ${response.status}`, retryAfter);
+      $("run-status").textContent = retryAfter ? `Server busy — retry in about ${retryAfter} s.` : "";
       return;
     }
   } catch {
+    setBusy(false);
+    $("results").hidden = true;
     renderFailure(null, "Network error");
     $("run-status").textContent = "";
     return;
-  } finally {
-    setBusy(false);
   }
+  setBusy(false);
 
   renderTechnical(result);
   renderFailure(result, null);
+  const results = $("results");
   if (result.status !== "completed" || !result.summary || !result.findings) {
-    $("results").hidden = true;
-    $("run-status").textContent = "Failed — see the message above.";
+    results.hidden = false;
+    results.classList.add("is-failed");
+    $("run-status").textContent = "Failed — see the message below the console.";
     $("failure").scrollIntoView({ block: "start" });
     return;
   }
-  renderSummary(result);
+  results.classList.remove("is-failed");
+  $("case-id").textContent = shortId(result.findings.behavioralDiffId);
+  $("case-id").title = result.findings.behavioralDiffId;
+  renderVerdict(result.summary);
+  const measure = renderReadout(result);
+  renderChain(result);
   renderFindings(result.findings);
-  renderGit(result);
-  renderEvidence(result.findings);
+  renderWorkflows(result.summary);
+  renderEvidence(result);
+  renderSurface(result);
   renderExplanation(result.explanation);
-  $("results").hidden = false;
-  $("run-status").textContent = `Completed in ${result.durationMs} ms.`;
-  $("summary-card").scrollIntoView({ block: "start" });
+  results.hidden = false;
+
+  stageReveal();
+  animateCounter(measure, 460);
+  const out = result.summary.output;
+  $("run-status").textContent = `${result.summary.verdict}${out ? `: ${out.before} → ${out.after}` : ""}. Completed in ${result.durationMs} ms.`;
+  const readout = $("readout");
+  if (readout.getBoundingClientRect().top < 0 || readout.getBoundingClientRect().top > window.innerHeight * 0.5) {
+    readout.scrollIntoView({ block: "start", behavior: reducedMotion.matches ? "auto" : "smooth" });
+  }
   $("verdict").focus({ preventScroll: true });
 }
 
@@ -567,9 +621,12 @@ async function init() {
     if (!scenario) throw new Error("scenario missing");
     $("scenario-title").textContent = scenario.title;
     $("scenario-description").textContent = scenario.description;
+    $("scenario-change").textContent = scenario.change || "";
     $("run").disabled = false;
   } catch {
     $("scenario-title").textContent = "Demo unavailable";
+    setRunState("error");
+    $("run-state-text").textContent = "Unavailable";
   }
   $("run").addEventListener("click", run);
 }
