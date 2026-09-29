@@ -43,9 +43,8 @@
 ## 2. Assumptions
 
 1. Calendar constraints before 30 Sep 2026 (other commitments) may limit coding time.
-2. Eligibility email to `hello@hack47.org` still outstanding.
-3. Discovery remains **closed**; DiffWitness is product direction via reset — not another hunt.
-4. Earlier abandoned directions (see `archive/`) are **not** extended — no feature carryover.
+2. Discovery remains **closed**; DiffWitness is product direction via reset — not another hunt.
+3. Earlier abandoned directions (see `archive/`) are **not** extended — no feature carryover.
 
 ---
 

@@ -255,5 +255,4 @@ Kill or pivot if validation shows:
 
 ## Assumptions
 
-- Eligibility for solo adult professional still pending `hello@hack47.org` confirmation.
 - First language: TypeScript (see Implementation Plan).

@@ -127,5 +127,4 @@ The hard part of "explain what changed" isn't generating text — it's refusing 
 - [ ] Repository public, with the screenshot rendering in the README
 - [ ] AI tools and third-party software disclosed (sections above)
 - [ ] Prize opt-in checkbox checked on Devpost
-- [ ] Eligibility confirmed in writing with the organizers (hello@hack47.org)
 - [ ] Demo kept live through **25 Oct 2026**
