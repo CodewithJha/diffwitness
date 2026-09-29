@@ -1,0 +1,6 @@
+{
+  "items": [
+    { "sku": "desk", "price": 250, "qty": 1 },
+    { "sku": "lamp", "price": 50, "qty": 2 }
+  ]
+}

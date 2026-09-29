@@ -1,0 +1,19 @@
+{
+  "name": "diffwitness-workspace",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "DiffWitness: detect behavioral changes that tests and Git diffs can miss. Repo root; deploys the hosted demo from packages/diffwitness.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm --prefix packages/diffwitness ci --include=dev && npm --prefix packages/diffwitness run build",
+    "start": "node packages/diffwitness/dist/hosted/server.js",
+    "test": "npm --prefix packages/diffwitness test",
+    "typecheck": "npm --prefix packages/diffwitness run typecheck",
+    "demo": "npm --prefix packages/diffwitness run demo",
+    "demo:m7": "npm --prefix packages/diffwitness run demo:m7"
+  }
+}

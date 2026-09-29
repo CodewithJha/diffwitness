@@ -1,0 +1,55 @@
+{
+  "name": "diffwitness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Detect behavioral changes that tests and Git diffs can miss \u2014 local-first CLI that compares execution evidence before and after a code change.",
+  "keywords": [
+    "behavioral-diff",
+    "regression",
+    "cli",
+    "ci",
+    "evidence",
+    "testing",
+    "git"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "diffwitness": "./dist/cli/main.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "!dist/hosted",
+    "fixtures",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "diffwitness": "node --import tsx src/cli/main.ts",
+    "demo": "bash scripts/demo-pricing.sh",
+    "demo:m4": "bash scripts/demo-m4.sh",
+    "demo:m6": "bash scripts/demo-m6.sh",
+    "start": "node dist/hosted/server.js",
+    "demo:m7": "bash scripts/demo-m7.sh"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "yaml": "^2.6.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

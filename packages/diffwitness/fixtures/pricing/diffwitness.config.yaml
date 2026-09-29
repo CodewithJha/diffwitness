@@ -1,0 +1,23 @@
+# DiffWitness config for the pricing sample project.
+# Installed as .diffwitness/config.yaml after `diffwitness init`.
+version: 1
+baseRef: main
+workflows:
+  # The behavior users see: the quote for the sample order.
+  - id: pricing
+    name: Quote for the sample order
+    command: ["node", "bin/quote.mjs"]
+    timeoutMs: 10000
+  # The project's own test suite (dot reporter: one "." per passing test, no timings).
+  - id: tests
+    name: Unit tests
+    command: ["node", "--test", "--test-reporter=dot", "test/pricing.test.mjs"]
+    timeoutMs: 20000
+assumptions:
+  - id: quote-total-stable
+    description: The quoted total for the sample order only changes when pricing rules intentionally change.
+ai:
+  provider: mock
+execution:
+  allowCommands: true
+  envPolicy: path
