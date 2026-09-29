@@ -240,51 +240,240 @@ function resetChain() {
   for (const id of ["chain-code", "chain-tests", "chain-behavior", "chain-evidence", "chain-causality"]) setChain(id, "idle", "—");
 }
 
-function renderFindings(findings) {
-  const items = findings.items.map((f) =>
-    el("li", {}, [
-      el("span", { className: `sev sev-${f.severity}`, text: f.severity }),
-      el("span", { className: "finding-text", text: `${f.workflowId} · ${f.observationKey} — ${f.summary}` }),
-      el("span", { className: "muted small", text: f.associationStatus === "associated" ? "changed alongside the Git change below" : `association: ${f.associationStatus || "—"}` }),
-    ]),
-  );
-  $("findings-list").replaceChildren(...(items.length ? items : [el("li", { text: "No behavioral findings." })]));
+/* ── Copyable evidence IDs ──────────────────────────────────────────────── */
+
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {
+    /* fall through to the selection fallback */
+  }
+  const area = el("textarea", { readonly: "", "aria-hidden": "true", className: "copy-buffer" });
+  area.value = text;
+  document.body.append(area);
+  area.select();
+  let ok = false;
+  try {
+    ok = document.execCommand("copy");
+  } catch {
+    ok = false;
+  }
+  area.remove();
+  return ok;
 }
 
-function renderGit(result) {
-  const change = result.stages.find((s) => s.id === "change");
-  $("git-diff").textContent = change && change.stdout ? change.stdout : "(no diff)";
-  const cs = result.findings && result.findings.changeSurface;
-  $("surface-note").textContent = cs
-    ? `Change surface (Git): ${cs.files.map((f) => `${f.status} ${f.path}`).join(", ") || "none"} · causality: ${cs.causality === "not_established" ? "not established" : cs.causality}`
-    : "";
+function evidenceChip(evidenceId) {
+  const button = el("button", { type: "button", className: "chip", "aria-label": `Copy evidence ID ${evidenceId}`, title: "Copy evidence ID" }, [
+    el("span", { className: "chip-id", text: evidenceId }),
+    el("span", { className: "chip-action", "aria-hidden": "true", text: "Copy" }),
+  ]);
+  button.addEventListener("click", async () => {
+    const ok = await copyText(evidenceId);
+    if (!ok) window.getSelection().selectAllChildren(button.querySelector(".chip-id"));
+    button.dataset.copied = ok ? "true" : "false";
+    button.querySelector(".chip-action").textContent = ok ? "Copied" : "Select";
+    $("copy-status").textContent = ok ? `Copied ${evidenceId}` : `Clipboard unavailable — ${evidenceId} is selected; press Ctrl+C or ⌘C`;
+    setTimeout(() => {
+      delete button.dataset.copied;
+      button.querySelector(".chip-action").textContent = "Copy";
+    }, 1400);
+  });
+  return button;
 }
 
-function evidenceSide(label, side) {
-  const preview = side && side.preview !== null ? side.preview.replace(/\n$/, "") : "(no preview in packet)";
-  return el("div", { className: "side" }, [
-    el("div", { className: "side-head" }, [
-      el("strong", { text: label }),
-      el("code", { className: "evid", text: side ? side.evidenceId : "(none)" }),
-    ]),
-    el("pre", { text: preview || "(empty)" }),
+/* ── Case file: findings ────────────────────────────────────────────────── */
+
+function previewText(side) {
+  if (!side) return "(no record)";
+  if (side.preview === null) return "(no preview in packet)";
+  return side.preview.replace(/\n$/, "") || "(empty)";
+}
+
+function specimen(label, side, className) {
+  return el("div", { className: `specimen-side ${className}` }, [
+    el("p", { className: "micro", text: label }),
+    el("pre", { className: "specimen-value", text: previewText(side) }),
+    side ? evidenceChip(side.evidenceId) : el("span", { className: "chip-none", text: "no evidence ID" }),
   ]);
 }
 
-function renderEvidence(findings) {
-  const blocks = findings.items.map((f) =>
-    el("div", { className: "evidence" }, [
-      el("p", { className: "evidence-title", text: `${f.workflowId} · ${f.observationKey}` }),
-      el("div", { className: "sides" }, [evidenceSide("Before (baseline)", f.before), evidenceSide("After (current)", f.after)]),
+function renderFindings(findings) {
+  const items = findings.items.map((f, i) =>
+    el("article", { className: "finding", "aria-labelledby": `finding-${i}` }, [
+      el("div", { className: "finding-index" }, [
+        el("p", { className: "micro", text: "Finding" }),
+        el("p", { className: "finding-number", text: pad2(i + 1) }),
+        el("p", { className: `severity severity-${f.severity}`, text: f.severity }),
+      ]),
+      el("div", { className: "finding-main" }, [
+        el("h3", { className: "finding-title", id: `finding-${i}`, text: `${f.workflowId} · ${f.observationKey}` }),
+        el("p", { className: "finding-summary", text: f.summary }),
+        el("dl", { className: "finding-meta" }, [
+          el("dt", { text: "Finding ID" }), el("dd", { text: f.id }),
+          el("dt", { text: "Type" }), el("dd", { text: f.findingType }),
+          el("dt", { text: "Change surface" }),
+          el("dd", { text: f.associationStatus === "associated" ? "changed alongside · co-occurrence" : f.associationStatus || "—" }),
+        ]),
+        el("div", { className: "specimen-pair" }, [
+          specimen("Baseline", f.before, "is-base"),
+          el("span", { className: "specimen-arrow", "aria-hidden": "true" }),
+          specimen("Current", f.after, "is-current"),
+        ]),
+      ]),
     ]),
   );
-  $("evidence-list").replaceChildren(...blocks);
+  $("findings-list").replaceChildren(...(items.length ? items : [el("p", { className: "empty", text: "No behavioral findings." })]));
 }
+
+/* ── Case file: execution trace ─────────────────────────────────────────── */
+
+function renderWorkflows(summary) {
+  const rows = [
+    { id: summary.tests.workflowId, role: "tests", state: summary.tests.result === "PASS" ? "pass" : "fault", value: `${summary.tests.result} · ${summary.tests.changed ? "changed" : "unchanged"}` },
+    { id: summary.behavior.workflowId, role: "behavior", state: summary.behavior.changed ? "changed" : "pass", value: summary.behavior.changed ? "CHANGED" : "unchanged" },
+  ];
+  $("workflow-rails").replaceChildren(
+    ...rows.map((r) =>
+      el("li", { className: "rail", "data-state": r.state }, [
+        el("span", { className: "lamp", "aria-hidden": "true" }),
+        el("span", { className: "rail-id", text: r.id }),
+        el("span", { className: "rail-role", text: r.role === "tests" ? "test suite" : "observed output" }),
+        el("span", { className: "rail-line", "aria-hidden": "true" }),
+        el("span", { className: "rail-value", text: r.value }),
+      ]),
+    ),
+  );
+}
+
+function renderStageTrace(stages) {
+  const longest = Math.max(1, ...stages.map((s) => s.durationMs));
+  $("stage-trace").replaceChildren(
+    ...stages.map((stage, i) => {
+      const ok = stage.exitCode === 0;
+      const bar = el("span", { className: "stage-bar", "aria-hidden": "true" });
+      bar.style.setProperty("--w", `${Math.max(2, (stage.durationMs / longest) * 100)}%`);
+      return el("li", { className: "stage", "data-state": ok ? "pass" : "fault" }, [
+        el("span", { className: "stage-n", text: pad2(i + 1) }),
+        el("span", { className: "stage-label", text: stage.label }),
+        el("code", { className: "stage-cmd", text: `$ ${stage.command}` }),
+        bar,
+        el("span", { className: "stage-exit", text: stage.exitCode === null ? stage.outcome : `exit ${stage.exitCode}` }),
+        el("span", { className: "stage-ms", text: `${stage.durationMs} ms` }),
+      ]);
+    }),
+  );
+}
+
+/* ── Case file: evidence register ───────────────────────────────────────── */
+
+function renderEvidence(result) {
+  const s = result.summary;
+  const citing = new Map();
+  const previews = new Map();
+  result.findings.items.forEach((f, i) => {
+    for (const id of f.evidenceIds) citing.set(id, [...(citing.get(id) || []), `F${pad2(i + 1)}`]);
+    for (const side of [f.before, f.after]) if (side && side.preview !== null) previews.set(side.evidenceId, previewText(side));
+  });
+  const records = [
+    ...s.evidence.baseline.map((id) => ({ id, role: "Baseline" })),
+    ...s.evidence.current.map((id) => ({ id, role: "Current" })),
+  ];
+  $("evidence-list").replaceChildren(
+    ...records.map((r, i) => {
+      const cites = citing.get(r.id);
+      return el("li", { className: `record${cites ? " is-cited" : ""}`, "data-role": r.role.toLowerCase() }, [
+        el("span", { className: "record-n", text: `E${pad2(i + 1)}` }),
+        el("span", { className: "record-role", text: r.role }),
+        evidenceChip(r.id),
+        el("span", { className: "record-cite", text: cites ? `cited by ${cites.join(", ")}` : "held · not cited" }),
+        previews.has(r.id) ? el("code", { className: "record-preview", text: previews.get(r.id) }) : null,
+      ]);
+    }),
+  );
+}
+
+/* ── Case file: change surface and causality ────────────────────────────── */
+
+function renderDiff(text) {
+  const pre = $("git-diff");
+  if (!text) {
+    pre.textContent = "(no diff)";
+    return;
+  }
+  const lines = text.replace(/\n$/, "").split("\n").map((line) => {
+    const kind = line.startsWith("+++") || line.startsWith("---") || line.startsWith("diff ") || line.startsWith("index ")
+      ? "meta"
+      : line.startsWith("@@") ? "hunk" : line.startsWith("+") ? "add" : line.startsWith("-") ? "del" : "ctx";
+    return el("span", { className: `diff-line diff-${kind}`, text: line });
+  });
+  pre.replaceChildren(...lines);
+}
+
+function renderSurface(result) {
+  const change = result.stages.find((s) => s.id === "change");
+  renderDiff(change && change.stdout ? change.stdout : "");
+  const cs = result.findings.changeSurface;
+  const findingRefs = result.findings.items.map((f, i) => ({ ref: `Finding ${pad2(i + 1)}`, associated: f.associationStatus === "associated" }));
+  const linked = findingRefs.filter((f) => f.associated).map((f) => f.ref);
+
+  if (!cs || cs.files.length === 0) {
+    $("surface-files").replaceChildren(el("li", { className: "empty", text: cs ? "No files changed." : "No change surface in the CLI result." }));
+    $("surface-rev").textContent = "";
+  } else {
+    $("surface-files").replaceChildren(
+      ...cs.files.map((f) =>
+        el("li", { className: "surface-file" }, [
+          el("code", { className: "surface-path", text: f.path }),
+          el("span", { className: "surface-status", text: f.status }),
+          el("span", { className: "surface-counts" }, [
+            el("span", { className: "count-add", text: f.additions === null ? "+?" : `+${f.additions}` }),
+            el("span", { className: "count-del", text: f.deletions === null ? `${MINUS}?` : `${MINUS}${f.deletions}` }),
+          ]),
+          el("span", { className: "surface-link", text: linked.length ? `Changed alongside ${linked.join(", ")}` : `association: ${cs.associationStatus}` }),
+        ]),
+      ),
+    );
+    const base = cs.baseRevision ? cs.baseRevision.slice(0, 12) : "—";
+    const current = cs.currentRevision ? cs.currentRevision.slice(0, 12) : "—";
+    $("surface-rev").textContent = `baseline ${base} → executed ${current}${cs.workingTreeIncluded ? " + working tree" : ""}`;
+  }
+  const causality = cs ? cs.causality : result.summary.causality;
+  $("h-trust").textContent = causality === "not_established" ? "Not established" : causality;
+  const gap = $("causality-gap");
+  const first = result.findings.items[0];
+  gap.hidden = !(first && cs && cs.files.length && causality === "not_established");
+  if (!gap.hidden) {
+    $("gap-finding").textContent = `Finding 01 · ${first.workflowId} · ${first.observationKey}`;
+    $("gap-files").textContent = cs.files.map((f) => f.path).join(", ");
+  }
+  $("causality-source").textContent = `changeSurface.causality = "${causality}" · association = "${cs ? cs.associationStatus : "—"}"`;
+}
+
+/* ── Case file: explanation and technical details ───────────────────────── */
 
 function renderExplanation(explanation) {
   if (!explanation) return;
-  $("explain-summary").textContent = `MockAI — deterministic offline explainer (${explanation.status}; ${explanation.promptVersion || "—"})`;
+  $("explain-summary").textContent = `MockAI — deterministic offline explainer · ${explanation.status} · ${explanation.promptVersion || "—"}`;
   $("explain-narrative").textContent = explanation.narrative || explanation.error || "(no explanation)";
+  $("explain-facts").replaceChildren(
+    ...(explanation.facts.length
+      ? explanation.facts.map((f) => el("li", {}, [
+          el("span", { text: f.claim }),
+          f.evidenceIds.length ? el("span", { className: "explain-cite", text: `evidence: ${f.evidenceIds.join(", ")}` }) : null,
+        ]))
+      : [el("li", { className: "empty", text: "No facts returned." })]),
+  );
+  $("explain-hypotheses").replaceChildren(
+    ...(explanation.hypotheses.length
+      ? explanation.hypotheses.map((h) => el("li", {}, [
+          el("span", { className: "confidence", text: h.confidence }),
+          el("span", { text: h.claim }),
+        ]))
+      : [el("li", { className: "empty", text: "No hypotheses returned." })]),
+  );
   $("explain-caveats").replaceChildren(...explanation.caveats.map((c) => el("li", { text: c })));
 }
 
@@ -308,6 +497,7 @@ function renderTechnical(result) {
   $("config-text").textContent = result.scenario.config || "(not installed)";
   $("stage-list").replaceChildren(...result.stages.map(renderStage));
   $("raw-json").textContent = JSON.stringify(result, null, 2);
+  renderStageTrace(result.stages);
 }
 
 function renderFailure(result, fallbackMessage) {
