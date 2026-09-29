@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Afterhours</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <main>
+    <p class="eyebrow">Afterhours</p>
+    <h1>Turn a messy week into a brief you can ship.</h1>
+    <p class="lede">Paste GitHub, Linear, and email notes. Get one decision, the blockers, and what to ignore.</p>
+    <textarea id="notes" rows="12" placeholder="Mon: 14 review pings
+Tue: Linear H-203 blocked on design
+Wed: customer email about export CSV
+Thu: almost shipped billing, tests red
+Fri: standup, more pings, still no export"></textarea>
+    <button id="run" type="button">Write the brief</button>
+    <pre id="out" hidden></pre>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

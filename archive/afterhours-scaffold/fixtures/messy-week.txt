@@ -1,0 +1,5 @@
+Mon: 14 review pings, none blocking but they ate the morning
+Tue: Linear H-203 export CSV still blocked on the schema decision
+Wed: customer email — they will churn if export is not this week
+Thu: billing almost shipped, tests red on tax rounding
+Fri: standup, more pings, still no export, nobody wrote the decision down
