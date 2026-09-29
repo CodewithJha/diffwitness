@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DiffWitness — detect behavioral changes that tests and Git diffs can miss</title>
+  <meta name="description" content="DiffWitness runs your workflows, stores execution evidence, and shows exactly which observable behavior changed after a code change — with before/after values and evidence IDs.">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <span class="wordmark">DiffWitness</span>
+    <span class="meta">live demo · real CLI on the server · MockAI · nothing you send is executed</span>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <h1 id="hero-title">Detect behavioral changes that tests and Git diffs can miss.</h1>
+      <p class="lede">See what changed, with execution evidence.</p>
+
+      <div class="scenario">
+        <p class="scenario-title" id="scenario-title">Loading scenario…</p>
+        <p class="muted" id="scenario-description"></p>
+      </div>
+
+      <div class="actions">
+        <button id="run" type="button" disabled>Run demo</button>
+        <span id="run-status" class="muted" role="status" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <div id="failure" class="failure" role="alert" hidden></div>
+
+    <div id="results" hidden>
+      <section class="card summary" aria-labelledby="verdict" id="summary-card">
+        <h2 id="verdict" tabindex="-1">—</h2>
+        <dl class="facts" id="summary-facts"></dl>
+      </section>
+
+      <section class="card" aria-labelledby="h-finding">
+        <h2 id="h-finding">What changed</h2>
+        <ul class="findings" id="findings-list"></ul>
+      </section>
+
+      <section class="card" aria-labelledby="h-git">
+        <h2 id="h-git">Git change</h2>
+        <p class="muted">The real <code>git diff</code> applied after the baseline. Files are listed alongside findings as co-occurrence only.</p>
+        <pre class="diff" id="git-diff"></pre>
+        <p class="muted small" id="surface-note"></p>
+      </section>
+
+      <section class="card" aria-labelledby="h-evidence">
+        <h2 id="h-evidence">Evidence</h2>
+        <p class="muted">Stored observation previews from the baseline run and the current run, with their evidence IDs.</p>
+        <div id="evidence-list"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-explain">
+        <h2 id="h-explain">Explanation</h2>
+        <details id="explain-details">
+          <summary id="explain-summary">MockAI — deterministic offline explainer</summary>
+          <p class="muted small">Explains only the evidence packet the CLI built. It cannot change findings, status, or exit codes.</p>
+          <pre id="explain-narrative"></pre>
+          <h3>Caveats</h3>
+          <ul id="explain-caveats"></ul>
+        </details>
+      </section>
+
+      <section class="card trust" aria-labelledby="h-trust">
+        <h2 id="h-trust">Trust guarantee</h2>
+        <p>DiffWitness reports evidence, not guesses. <strong>Causality: not established</strong> — a file changing alongside a finding is co-occurrence, never proof of cause.</p>
+      </section>
+
+      <section class="card" aria-labelledby="h-tech">
+        <h2 id="h-tech">Technical details</h2>
+        <details>
+          <summary>Workflow config and raw terminal output per stage</summary>
+          <h3>.diffwitness/config.yaml</h3>
+          <pre id="config-text"></pre>
+          <div id="stage-list"></div>
+        </details>
+        <details>
+          <summary>Full JSON response</summary>
+          <pre id="raw-json"></pre>
+        </details>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer muted">
+    Each run copies a small built-in project into a fresh temporary Git repository, runs the real DiffWitness CLI, and deletes the repository afterwards. No accounts, no tracking, no stored history.
+  </footer>
+</body>
+</html>
