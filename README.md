@@ -3,7 +3,7 @@
 **Detect behavioral changes that tests and Git diffs can miss.** See what changed, with execution evidence.
 
 - **Live demo:** TODO — add the hosted demo URL after deployment
-- **Source:** TODO — add the public repository URL after publishing
+- **Source:** https://github.com/CodewithJha/diffwitness
 - **Demo video:** TODO — add the video URL
 
 ![DiffWitness hosted demo: a one-line pricing change passes the tests, DiffWitness reports BEHAVIOR CHANGED with the quote going from {"total":315} to {"total":280}](docs/assets/demo.png)
@@ -48,7 +48,7 @@ The `tests` workflow is the project's own test suite. It is **unchanged and pass
 Requirements: Node.js 20+, Git.
 
 ```bash
-git clone <this repository> diffwitness && cd diffwitness
+git clone https://github.com/CodewithJha/diffwitness.git && cd diffwitness
 npm ci
 npm run build            # installs and builds packages/diffwitness
 npm run demo             # the pricing example above, end to end, in a temp repo

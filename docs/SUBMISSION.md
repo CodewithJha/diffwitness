@@ -20,7 +20,7 @@ TODO — hosted demo URL (see `docs/DEPLOYMENT.md`)
 
 ## Source
 
-TODO — public repository URL
+https://github.com/CodewithJha/diffwitness
 
 ## Demo video
 
@@ -122,7 +122,7 @@ The hard part of "explain what changed" isn't generating text — it's refusing 
 ## Submitter checklist
 
 - [ ] Hosted demo deployed and reachable; `/ready` returns 200; the demo button completes
-- [ ] Demo URL, repository URL, and video URL filled in above, in `README.md`, and on Devpost
+- [ ] Demo URL and video URL filled in above and in `README.md`; all three URLs on Devpost
 - [ ] Video recorded per `docs/DEMO-SCRIPT.md` (2–3 minutes; demo on screen within the first 30 seconds)
 - [ ] Repository public, with the screenshot rendering in the README
 - [ ] AI tools and third-party software disclosed (sections above)
