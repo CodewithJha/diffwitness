@@ -3,93 +3,241 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
   <title>DiffWitness — detect behavioral changes that tests and Git diffs can miss</title>
   <meta name="description" content="DiffWitness runs your workflows, stores execution evidence, and shows exactly which observable behavior changed after a code change — with before/after values and evidence IDs.">
   <link rel="stylesheet" href="/styles.css">
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <span class="wordmark">DiffWitness</span>
-    <span class="meta">live demo · real CLI on the server · MockAI · nothing you send is executed</span>
+  <a class="skip" href="#readout">Skip to the result</a>
+
+  <header class="bar">
+    <span class="mark">DiffWitness</span>
+    <span class="bar-label">Behavioral forensics console</span>
+    <span class="bar-case" title="Investigation ID — derived from the behavioral diff ID returned by the CLI">
+      <span class="micro">Case</span>
+      <span class="bar-case-id" id="case-id">—</span>
+    </span>
+    <span class="bar-state" id="run-state" data-state="idle">
+      <span class="lamp" aria-hidden="true"></span>
+      <span id="run-state-text">Idle</span>
+    </span>
   </header>
 
   <main>
-    <section class="hero" aria-labelledby="hero-title">
-      <h1 id="hero-title">Detect behavioral changes that tests and Git diffs can miss.</h1>
-      <p class="lede">See what changed, with execution evidence.</p>
+    <section class="console" aria-labelledby="thesis">
+      <div class="brief">
+        <p class="kicker">Digital forensics for software behavior</p>
+        <h1 id="thesis">Your tests passed. <span class="thesis-turn">Your behavior didn’t.</span></h1>
+        <p class="lede">DiffWitness runs your workflows before and after a code change, stores the execution evidence, and shows exactly which observable behavior moved.</p>
 
-      <div class="scenario">
-        <p class="scenario-title" id="scenario-title">Loading scenario…</p>
-        <p class="muted" id="scenario-description"></p>
+        <div class="specimen" aria-labelledby="scenario-title">
+          <p class="micro">Specimen</p>
+          <p class="specimen-title" id="scenario-title">Loading scenario…</p>
+          <p class="specimen-desc" id="scenario-description"></p>
+          <p class="specimen-change" id="scenario-change"></p>
+        </div>
+
+        <div class="control">
+          <button id="run" class="run" type="button" disabled>
+            <span class="run-glyph" aria-hidden="true"></span>
+            <span class="run-label" id="run-label">Run investigation</span>
+          </button>
+          <p id="run-status" class="run-status" role="status" aria-live="polite"></p>
+        </div>
+
+        <p class="assurance">Real CLI on the server · fresh temporary Git repo per run · MockAI explainer · nothing you send is executed</p>
       </div>
 
-      <div class="actions">
-        <button id="run" type="button" disabled>Run demo</button>
-        <span id="run-status" class="muted" role="status" aria-live="polite"></span>
-      </div>
+      <section class="readout" id="readout" aria-labelledby="verdict" data-state="idle">
+        <div class="readout-head">
+          <p class="micro">Verdict</p>
+          <h2 id="verdict" class="verdict" tabindex="-1">Awaiting run</h2>
+          <p class="readout-key" id="readout-key">Run the investigation to measure the specimen.</p>
+        </div>
+
+        <div class="dial">
+          <div class="reading reading-base">
+            <p class="micro">Baseline</p>
+            <p class="numeral" id="num-before" aria-describedby="raw-before">—</p>
+            <p class="raw" id="raw-before"></p>
+          </div>
+          <div class="dial-arrow" aria-hidden="true"></div>
+          <div class="reading reading-current">
+            <p class="micro">Current</p>
+            <p class="numeral" id="num-after" aria-describedby="raw-after">—</p>
+            <p class="raw" id="raw-after"></p>
+          </div>
+        </div>
+
+        <div class="scale" id="scale" aria-hidden="true" hidden>
+          <div class="scale-rule"></div>
+          <div class="scale-bracket" id="scale-bracket"></div>
+          <span class="scale-marker scale-marker-base" id="marker-base"></span>
+          <span class="scale-marker scale-marker-current" id="marker-current"></span>
+          <div class="scale-labels" id="scale-labels"></div>
+        </div>
+
+        <dl class="shift">
+          <div class="shift-item shift-delta">
+            <dt class="micro">Observed shift</dt>
+            <dd id="shift-delta">—</dd>
+          </div>
+          <div class="shift-item">
+            <dt class="micro">Observations</dt>
+            <dd id="shift-observations">—</dd>
+          </div>
+          <div class="shift-item">
+            <dt class="micro">Run time</dt>
+            <dd id="shift-duration">—</dd>
+          </div>
+        </dl>
+      </section>
+
+      <ol class="chain" aria-label="Investigation sequence">
+        <li class="chain-step" id="chain-code" data-state="idle">
+          <span class="lamp" aria-hidden="true"></span>
+          <span class="chain-label">Code changed</span>
+          <span class="chain-value">—</span>
+        </li>
+        <li class="chain-step" id="chain-tests" data-state="idle">
+          <span class="lamp" aria-hidden="true"></span>
+          <span class="chain-label">Tests still passed</span>
+          <span class="chain-value">—</span>
+        </li>
+        <li class="chain-step" id="chain-behavior" data-state="idle">
+          <span class="lamp" aria-hidden="true"></span>
+          <span class="chain-label">Observable behavior moved</span>
+          <span class="chain-value">—</span>
+        </li>
+        <li class="chain-step" id="chain-evidence" data-state="idle">
+          <span class="lamp" aria-hidden="true"></span>
+          <span class="chain-label">Evidence captured</span>
+          <span class="chain-value">—</span>
+        </li>
+        <li class="chain-step" id="chain-causality" data-state="idle">
+          <span class="lamp" aria-hidden="true"></span>
+          <span class="chain-label">Causality</span>
+          <span class="chain-value">—</span>
+        </li>
+      </ol>
     </section>
 
     <div id="failure" class="failure" role="alert" hidden></div>
 
-    <div id="results" hidden>
-      <section class="card summary" aria-labelledby="verdict" id="summary-card">
-        <h2 id="verdict" tabindex="-1">—</h2>
-        <dl class="facts" id="summary-facts"></dl>
+    <div id="results" class="casefile" hidden>
+      <section class="block block-findings" aria-labelledby="h-finding" data-rv="6">
+        <div class="block-rail">
+          <p class="block-index">A</p>
+          <h2 id="h-finding" class="block-title">Findings</h2>
+          <p class="block-note">What the engine measured. Each finding cites its stored evidence.</p>
+        </div>
+        <div class="block-body" id="findings-list"></div>
       </section>
 
-      <section class="card" aria-labelledby="h-finding">
-        <h2 id="h-finding">What changed</h2>
-        <ul class="findings" id="findings-list"></ul>
+      <section class="block block-trace" aria-labelledby="h-trace" data-rv="6">
+        <div class="block-rail">
+          <p class="block-index">B</p>
+          <h2 id="h-trace" class="block-title">Execution trace</h2>
+          <p class="block-note">Workflows rerun against the baseline, and every CLI stage the server executed.</p>
+        </div>
+        <div class="block-body">
+          <ul class="rails" id="workflow-rails" aria-label="Workflows"></ul>
+          <ol class="stages" id="stage-trace" aria-label="CLI stages"></ol>
+        </div>
       </section>
 
-      <section class="card" aria-labelledby="h-git">
-        <h2 id="h-git">Git change</h2>
-        <p class="muted">The real <code>git diff</code> applied after the baseline. Files are listed alongside findings as co-occurrence only.</p>
-        <pre class="diff" id="git-diff"></pre>
-        <p class="muted small" id="surface-note"></p>
+      <section class="block block-evidence" aria-labelledby="h-evidence" data-rv="7">
+        <div class="block-rail">
+          <p class="block-index">C</p>
+          <h2 id="h-evidence" class="block-title">Evidence</h2>
+          <p class="block-note">Stored observation records from the baseline and current runs. Select an ID to copy it.</p>
+        </div>
+        <div class="block-body">
+          <ol class="register" id="evidence-list"></ol>
+        </div>
       </section>
 
-      <section class="card" aria-labelledby="h-evidence">
-        <h2 id="h-evidence">Evidence</h2>
-        <p class="muted">Stored observation previews from the baseline run and the current run, with their evidence IDs.</p>
-        <div id="evidence-list"></div>
+      <section class="block block-surface" aria-labelledby="h-git" data-rv="8">
+        <div class="block-rail">
+          <p class="block-index">D</p>
+          <h2 id="h-git" class="block-title">Change surface</h2>
+          <p class="block-note">The real <code>git diff</code> applied after the baseline. Files are listed alongside findings as co-occurrence only.</p>
+        </div>
+        <div class="block-body">
+          <ul class="surface" id="surface-files"></ul>
+          <p class="surface-rev" id="surface-rev"></p>
+          <pre class="diff" id="git-diff"></pre>
+        </div>
       </section>
 
-      <section class="card" aria-labelledby="h-explain">
-        <h2 id="h-explain">Explanation</h2>
-        <details id="explain-details">
-          <summary id="explain-summary">MockAI — deterministic offline explainer</summary>
-          <p class="muted small">Explains only the evidence packet the CLI built. It cannot change findings, status, or exit codes.</p>
-          <pre id="explain-narrative"></pre>
-          <h3>Caveats</h3>
-          <ul id="explain-caveats"></ul>
-        </details>
+      <section class="causality" aria-labelledby="h-trust" data-rv="9">
+        <p class="micro">Causality</p>
+        <h2 id="h-trust" class="causality-title">Not established</h2>
+        <p class="causality-thesis">We show what the evidence proves, and stop there.</p>
+        <p class="causality-gap" id="causality-gap" hidden>
+          <span class="gap-end" id="gap-finding"></span>
+          <span class="gap-break">no causal link asserted</span>
+          <span class="gap-end" id="gap-files"></span>
+        </p>
+        <p class="causality-body"><strong>Causality: not established</strong> — a file changing alongside a finding is co-occurrence, never proof of cause. DiffWitness reports evidence, not guesses.</p>
+        <p class="causality-source" id="causality-source"></p>
       </section>
 
-      <section class="card trust" aria-labelledby="h-trust">
-        <h2 id="h-trust">Trust guarantee</h2>
-        <p>DiffWitness reports evidence, not guesses. <strong>Causality: not established</strong> — a file changing alongside a finding is co-occurrence, never proof of cause.</p>
+      <section class="block block-explain" aria-labelledby="h-explain">
+        <div class="block-rail">
+          <p class="block-index">E</p>
+          <h2 id="h-explain" class="block-title">Explanation</h2>
+          <p class="block-note"><span class="tag">Explain-only</span> Built from the evidence packet alone. It cannot change findings, status, or exit codes.</p>
+        </div>
+        <div class="block-body">
+          <p class="explain-provider" id="explain-summary">MockAI — deterministic offline explainer</p>
+          <div class="explain-grid">
+            <div>
+              <h3 class="micro">Facts</h3>
+              <ul class="explain-list" id="explain-facts"></ul>
+            </div>
+            <div>
+              <h3 class="micro">Hypotheses</h3>
+              <ul class="explain-list" id="explain-hypotheses"></ul>
+            </div>
+          </div>
+          <h3 class="micro">Caveats</h3>
+          <ul class="explain-list explain-caveats" id="explain-caveats"></ul>
+          <details class="drawer">
+            <summary>Full explainer narrative</summary>
+            <pre id="explain-narrative"></pre>
+          </details>
+        </div>
       </section>
 
-      <section class="card" aria-labelledby="h-tech">
-        <h2 id="h-tech">Technical details</h2>
-        <details>
-          <summary>Workflow config and raw terminal output per stage</summary>
-          <h3>.diffwitness/config.yaml</h3>
-          <pre id="config-text"></pre>
-          <div id="stage-list"></div>
-        </details>
-        <details>
-          <summary>Full JSON response</summary>
-          <pre id="raw-json"></pre>
-        </details>
+      <section class="block block-tech" aria-labelledby="h-tech">
+        <div class="block-rail">
+          <p class="block-index">F</p>
+          <h2 id="h-tech" class="block-title">Technical details</h2>
+          <p class="block-note">Workflow config, raw terminal output per stage, and the full JSON response.</p>
+        </div>
+        <div class="block-body">
+          <details class="drawer">
+            <summary>Workflow config and raw terminal output per stage</summary>
+            <h3 class="micro">.diffwitness/config.yaml</h3>
+            <pre id="config-text"></pre>
+            <div id="stage-list"></div>
+          </details>
+          <details class="drawer">
+            <summary>Full JSON response</summary>
+            <pre id="raw-json"></pre>
+          </details>
+        </div>
       </section>
     </div>
   </main>
 
-  <footer class="footer muted">
-    Each run copies a small built-in project into a fresh temporary Git repository, runs the real DiffWitness CLI, and deletes the repository afterwards. No accounts, no tracking, no stored history.
+  <footer class="footer">
+    <p>Each run copies a small built-in project into a fresh temporary Git repository, runs the real DiffWitness CLI, and deletes the repository afterwards. No accounts, no tracking, no stored history.</p>
   </footer>
+
+  <p class="sr-only" id="copy-status" role="status" aria-live="polite"></p>
 </body>
 </html>
