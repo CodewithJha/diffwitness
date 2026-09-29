@@ -16,7 +16,7 @@ DiffWitness detects behavioral changes that tests and Git diffs can miss. It run
 
 ## Demo link
 
-TODO — hosted demo URL (see `docs/DEPLOYMENT.md`)
+https://diffwitness.onrender.com
 
 ## Source
 

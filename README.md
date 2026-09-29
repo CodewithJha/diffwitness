@@ -2,7 +2,7 @@
 
 **Detect behavioral changes that tests and Git diffs can miss.** See what changed, with execution evidence.
 
-- **Live demo:** TODO — add the hosted demo URL after deployment
+- **Live demo:** https://diffwitness.onrender.com
 - **Source:** https://github.com/CodewithJha/diffwitness
 - **Demo video:** TODO — add the video URL
 
