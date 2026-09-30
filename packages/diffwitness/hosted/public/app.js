@@ -596,18 +596,137 @@ function renderFailure(result, fallbackMessage, retryAfter) {
   if (retryAfter) parts.push(el("span", { className: "failure-retry", text: ` Retry in about ${retryAfter} s.` }));
   box.replaceChildren(...parts);
   setRunState("error");
+  setSequencer("fault", failure ? "Run failed" : "Request failed");
+  setRail("rail-execution", "fault", "failed", failure ? `${failure.kind}${failure.stage ? ` · ${failure.stage}` : ""}` : "no result returned");
+  $("readout-mode").textContent = "No reading";
   $("verdict").textContent = failure ? "Run failed" : "Request failed";
   $("readout-key").textContent = failure ? failure.kind : detail;
 }
 
-/* ── Staged reveal ──────────────────────────────────────────────────────── */
+/* ── Replay of the captured result ──────────────────────────────────────── */
 
-function stageReveal() {
-  const root = document.body;
-  root.classList.remove("is-revealing");
-  if (reducedMotion.matches) return;
-  void root.offsetWidth;
-  root.classList.add("is-revealing");
+function stageById(result, id) {
+  return result.stages.find((s) => s.id === id) || null;
+}
+
+function stageSummary(stage, extra) {
+  if (!stage) return extra || "—";
+  const exit = stage.exitCode === null ? stage.outcome : `exit ${stage.exitCode}`;
+  return `${extra ? `${extra} · ` : `${exit} · `}${stage.durationMs} ms`;
+}
+
+/** The eight replay steps, each carrying values read from the response and the UI it unlocks. */
+function replaySteps(result, index) {
+  const s = result.summary;
+  const out = s.output;
+  const shift = out ? measureShift(out.before, out.after) : null;
+  const o = s.observations;
+  const moved = o.changed + o.appeared + o.disappeared;
+  const files = (result.findings.changeSurface && result.findings.changeSurface.files) || [];
+  const stages = result.stages;
+  const allOk = stages.every((st) => st.exitCode === 0);
+  const first = result.findings.items[0];
+  const cited = index.records.filter((r) => r.citedBy.length).length;
+  const causality = s.causality === "not_established" ? "not established" : s.causality;
+  const readout = $("readout");
+
+  return [
+    { step: "init", value: stageSummary(stageById(result, "init")) },
+    {
+      step: "baseline",
+      value: stageSummary(stageById(result, "baseline"), plural(s.evidence.baseline.length, "record")),
+      apply: () => readout.classList.add("show-base"),
+    },
+    {
+      step: "execute",
+      value: stageSummary(stageById(result, "check")),
+      apply: () => setRail("rail-change", files.length ? "observed" : "idle", files.length ? "detected" : "none",
+        files.length ? files.map((f) => `${f.path} +${f.additions ?? "?"} ${MINUS}${f.deletions ?? "?"}`).join(", ") : "no Git change"),
+    },
+    {
+      step: "observe",
+      value: plural(moved + o.unchanged, "observation"),
+      apply: () => {
+        readout.classList.add("show-current");
+        if (shift) countTo($("num-after"), shift.before, shift.after, shift.decimals, formatNumber, formatNumber(shift.after, shift.decimals), 520);
+        setRail("rail-execution", allOk ? "pass" : "fault", allOk ? "complete" : "incomplete",
+          `${plural(stages.length, "stage")} · ${s.tests.workflowId} ${s.tests.result}`);
+      },
+    },
+    {
+      step: "compare",
+      value: `${moved} moved · ${o.unchanged} held`,
+      apply: () => {
+        readout.classList.add("show-shift", "is-locked");
+        $("readout-mode").textContent = "Verdict · locked";
+        setRunState(VERDICT_STATE[s.verdict] || "error");
+        $("verdict").textContent = s.verdict;
+        if (shift) {
+          countTo($("shift-delta"), 0, shift.delta, shift.decimals, (v, d) => `Δ ${formatSigned(v, d)}`, `Δ ${formatSigned(shift.delta, shift.decimals)}`, 440);
+        }
+        setRail("rail-behavior", s.behavior.changed ? "changed" : "pass", s.behavior.changed ? "changed" : "unchanged",
+          out ? `${out.workflowId} · ${out.observationKey} · ${out.before} → ${out.after}` : `${s.behavior.workflowId} · no output change`);
+      },
+    },
+    {
+      step: "finding",
+      value: first ? `${plural(result.findings.items.length, "finding")} · ${first.severity}` : "none",
+      apply: () => reveal("finding"),
+    },
+    {
+      step: "evidence",
+      value: `${index.records.length} captured · ${cited} cited`,
+      apply: () => {
+        reveal("evidence");
+        setRail("rail-evidence", "observed", "captured", `${plural(index.records.length, "record")} · ${cited} cited`);
+      },
+    },
+    {
+      step: "causality",
+      value: causality,
+      apply: () => {
+        reveal("causality");
+        setRail("rail-causality", "withheld", causality, "co-occurrence only");
+      },
+    },
+  ];
+}
+
+function reveal(name) {
+  for (const node of document.querySelectorAll(`[data-reveal="${name}"]`)) node.classList.add("is-shown");
+}
+
+function hideReveals() {
+  for (const node of document.querySelectorAll("[data-reveal]")) node.classList.remove("is-shown");
+}
+
+let runToken = 0;
+
+/** Plays the replay; resolves when every step (and its UI) is applied. Instant under reduced motion. */
+function playReplay(steps, token) {
+  return new Promise((resolve) => {
+    const applyStep = (i) => {
+      const { step, value, apply } = steps[i];
+      if (i > 0) setSequenceStep(steps[i - 1].step, "done");
+      setSequenceStep(step, "active", value);
+      if (apply) apply();
+    };
+    if (reducedMotion.matches) {
+      steps.forEach((_, i) => applyStep(i));
+      setSequenceStep(steps[steps.length - 1].step, "done");
+      resolve();
+      return;
+    }
+    let i = 0;
+    const next = () => {
+      if (token !== runToken) return resolve();
+      applyStep(i);
+      i += 1;
+      if (i < steps.length) setTimeout(next, REPLAY_STEP_MS);
+      else setTimeout(() => { setSequenceStep(steps[steps.length - 1].step, "done"); resolve(); }, REPLAY_STEP_MS);
+    };
+    next();
+  });
 }
 
 /* ── Run ────────────────────────────────────────────────────────────────── */
@@ -622,15 +741,68 @@ async function requestDemo() {
   return { response, body };
 }
 
-async function run() {
+function enterInFlight() {
   setBusy(true);
   setRunState("running");
-  $("verdict").textContent = "Measuring…";
-  $("run-status").textContent = "Running baseline → change → check → explain with the real CLI…";
-  document.body.classList.remove("is-revealing");
   renderFailure(null, null);
   resetReadout();
-  resetChain();
+  resetRail();
+  resetSequence();
+  hideReveals();
+  $("results").hidden = true;
+  $("verdict").textContent = "Investigating";
+  $("readout-mode").textContent = "Request in flight";
+  $("readout-key").textContent = "The server is running the real CLI in a fresh temporary repository.";
+  $("run-status").textContent = "Investigation running — waiting for the server to finish the real CLI run…";
+  setSequencer("inflight", "Request in flight · awaiting the complete result");
+  setRail("rail-execution", "active", "running", "request in flight");
+  startClock();
+  const readout = $("readout");
+  if (readout.getBoundingClientRect().top > window.innerHeight * 0.55) {
+    readout.scrollIntoView({ block: "start", behavior: reducedMotion.matches ? "auto" : "smooth" });
+  }
+}
+
+function populateResult(result, index) {
+  const s = result.summary;
+  const out = s.output;
+  const shift = out ? measureShift(out.before, out.after) : null;
+  const readout = $("readout");
+  $("case-id").textContent = shortId(result.findings.behavioralDiffId);
+  $("case-id").title = result.findings.behavioralDiffId;
+  $("readout-key").textContent = out
+    ? `workflow ${out.workflowId} · ${out.observationKey}${shift && shift.key ? ` · ${shift.key}` : ""}`
+    : "No output change recorded for the behavior workflow.";
+  $("raw-before").textContent = out ? out.before : "";
+  $("raw-after").textContent = out ? out.after : "";
+  readout.classList.toggle("is-verbatim", Boolean(out) && !shift);
+  if (!out) {
+    $("shift-delta").textContent = "none recorded";
+  } else if (!shift) {
+    $("num-before").textContent = out.before;
+    $("num-after").textContent = out.after;
+    $("shift-delta").textContent = "non-numeric · verbatim";
+  } else {
+    $("num-before").textContent = formatNumber(shift.before, shift.decimals);
+    $("num-after").textContent = formatNumber(shift.after, shift.decimals);
+    $("shift-delta").textContent = `Δ ${formatSigned(shift.delta, shift.decimals)}`;
+    $("shift-pct").textContent = shift.pct === null ? "" : `${formatSigned(shift.pct, 1)}%`;
+    renderScale(shift);
+  }
+  const o = s.observations;
+  $("shift-observations").textContent = `${o.changed + o.appeared + o.disappeared} moved · ${o.unchanged} held`;
+  $("shift-duration").textContent = `${(result.durationMs / 1000).toFixed(2)} s`;
+
+  renderFindings(result, index);
+  renderEvidence(index);
+  renderSurface(result);
+  renderCausality(result);
+  renderExplanation(result.explanation);
+}
+
+async function run() {
+  const token = ++runToken;
+  enterInFlight();
 
   let result = null;
   try {
@@ -638,53 +810,54 @@ async function run() {
     if (body && Array.isArray(body.stages)) {
       result = body;
     } else {
+      stopClock();
       const retryAfter = response.status === 503 ? response.headers.get("Retry-After") : null;
-      setBusy(false);
-      $("results").hidden = true;
+      resetRail();
       renderFailure(null, body && body.error ? body.error.message : `HTTP ${response.status}`, retryAfter);
-      $("run-status").textContent = retryAfter ? `Server busy — retry in about ${retryAfter} s.` : "";
+      $("run-status").textContent = retryAfter ? `Server busy — retry in about ${retryAfter} s.` : "Request failed.";
+      setBusy(false);
       return;
     }
   } catch {
-    setBusy(false);
-    $("results").hidden = true;
+    stopClock();
+    resetRail();
     renderFailure(null, "Network error");
-    $("run-status").textContent = "";
+    $("run-status").textContent = "Request failed — network error.";
+    setBusy(false);
     return;
   }
-  setBusy(false);
+  const elapsed = stopClock();
 
   renderTechnical(result);
-  renderFailure(result, null);
   const results = $("results");
   if (result.status !== "completed" || !result.summary || !result.findings) {
+    resetRail();
+    renderFailure(result, null);
     results.hidden = false;
     results.classList.add("is-failed");
-    $("run-status").textContent = "Failed — see the message below the console.";
+    $("run-status").textContent = "Failed — see the fault message below the rail.";
     $("failure").scrollIntoView({ block: "start" });
+    setBusy(false);
     return;
   }
-  results.classList.remove("is-failed");
-  $("case-id").textContent = shortId(result.findings.behavioralDiffId);
-  $("case-id").title = result.findings.behavioralDiffId;
-  renderVerdict(result.summary);
-  const measure = renderReadout(result);
-  renderChain(result);
-  renderFindings(result.findings);
-  renderWorkflows(result.summary);
-  renderEvidence(result);
-  renderSurface(result);
-  renderExplanation(result.explanation);
-  results.hidden = false;
 
-  stageReveal();
-  animateCounter(measure, 460);
+  results.classList.remove("is-failed");
+  const index = buildEvidenceIndex(result);
+  populateResult(result, index);
+  results.hidden = false;
+  setRunState("replay");
+  $("verdict").textContent = "Comparing";
+  $("readout-mode").textContent = "Replaying captured result";
+  setSequencer("replay", `Replaying captured result · response in ${formatClock(elapsed)}`);
+  setBusy(true, "Replaying…");
+  $("run-status").textContent = `Response received in ${formatClock(elapsed)} — replaying the captured result.`;
+
+  await playReplay(replaySteps(result, index), token);
+  if (token !== runToken) return;
+  setSequencer("done", `Captured result · response in ${formatClock(elapsed)} · server run ${(result.durationMs / 1000).toFixed(2)} s`);
+  setBusy(false);
   const out = result.summary.output;
   $("run-status").textContent = `${result.summary.verdict}${out ? `: ${out.before} → ${out.after}` : ""}. Completed in ${result.durationMs} ms.`;
-  const readout = $("readout");
-  if (readout.getBoundingClientRect().top < 0 || readout.getBoundingClientRect().top > window.innerHeight * 0.5) {
-    readout.scrollIntoView({ block: "start", behavior: reducedMotion.matches ? "auto" : "smooth" });
-  }
   $("verdict").focus({ preventScroll: true });
 }
 
