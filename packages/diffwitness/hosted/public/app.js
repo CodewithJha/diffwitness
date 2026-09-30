@@ -100,7 +100,7 @@ function pad2(n) {
 }
 
 function plural(n, word) {
-  return `${n} ${word}${n === 1 ? "" : "s"}`;
+  return `${n}\u00a0${word}${n === 1 ? "" : "s"}`;
 }
 
 function nicestep(raw) {
@@ -180,6 +180,9 @@ function renderScale(shift) {
   bracket.style.setProperty("--from", `${pos(lo0)}%`);
   bracket.style.setProperty("--to", `${pos(hi0)}%`);
   bracket.classList.toggle("is-falling", shift.after < shift.before);
+  const delta = $("scale-delta");
+  delta.textContent = shift.delta === 0 ? "" : `Δ ${formatSigned(shift.delta, shift.decimals)}`;
+  delta.style.setProperty("--mid", `${(pos(lo0) + pos(hi0)) / 2}%`);
 
   const labels = [];
   const labelDecimals = Math.max(shift.decimals, decimalsOf(step));
@@ -193,7 +196,7 @@ function renderScale(shift) {
 
 function resetReadout() {
   for (const id of ["num-before", "num-after", "shift-delta", "shift-observations", "shift-duration"]) $(id).textContent = "—";
-  for (const id of ["raw-before", "raw-after", "shift-pct"]) $(id).textContent = "";
+  for (const id of ["raw-before", "raw-after", "shift-pct", "scale-delta"]) $(id).textContent = "";
   $("scale").hidden = true;
   const readout = $("readout");
   readout.classList.remove("is-verbatim", "show-base", "show-current", "show-shift", "is-locked");
@@ -629,8 +632,8 @@ function stageById(result, id) {
 
 function stageSummary(stage, extra) {
   if (!stage) return extra || "—";
-  const exit = stage.exitCode === null ? stage.outcome : `exit ${stage.exitCode}`;
-  return `${extra ? `${extra} · ` : `${exit} · `}${stage.durationMs} ms`;
+  const exit = stage.exitCode === null ? stage.outcome : `exit\u00a0${stage.exitCode}`;
+  return `${extra ? `${extra} · ` : `${exit} · `}${stage.durationMs}\u00a0ms`;
 }
 
 /** The eight replay steps, each carrying values read from the response and the UI it unlocks. */
@@ -677,7 +680,7 @@ function replaySteps(result, index) {
     },
     {
       step: "compare",
-      value: `${moved} moved · ${o.unchanged} held`,
+      value: `${moved}\u00a0moved · ${o.unchanged}\u00a0held`,
       apply: () => {
         readout.classList.add("show-shift", "is-locked");
         $("readout-mode").textContent = "Verdict · locked";
@@ -700,10 +703,10 @@ function replaySteps(result, index) {
     },
     {
       step: "evidence",
-      value: `${index.records.length} captured · ${cited} cited`,
+      value: `${index.records.length}\u00a0captured · ${cited}\u00a0cited`,
       apply: () => {
         reveal("evidence");
-        setRail("rail-evidence", "observed", "captured", `${plural(index.records.length, "record")} · ${cited} cited`);
+        setRail("rail-evidence", "captured", "captured", `${plural(index.records.length, "record")} · ${cited} cited`);
       },
     },
     {
@@ -815,7 +818,7 @@ function populateResult(result, index) {
     renderScale(shift);
   }
   const o = s.observations;
-  $("shift-observations").textContent = `${o.changed + o.appeared + o.disappeared} moved · ${o.unchanged} held`;
+  $("shift-observations").textContent = `${o.changed + o.appeared + o.disappeared}\u00a0moved · ${o.unchanged}\u00a0held`;
   $("shift-duration").textContent = `${(result.durationMs / 1000).toFixed(2)} s`;
 
   renderFindings(result, index);
