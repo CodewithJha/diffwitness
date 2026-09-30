@@ -1,6 +1,6 @@
 # Deploying the DiffWitness hosted demo
 
-The hosted demo is one Node.js process with no database, no disk persistence, no API keys, and no provider SDKs. Any host that can run `npm` and has `git` on `PATH` works. There are no provider-specific files in this repository.
+The hosted demo is one Node.js process with no database, no disk persistence, no API keys, and no provider SDKs. Any host that can run `npm` and has `git` on `PATH` works. There are no provider-specific files in this repository. What the demo does and its API: [Hosted demo reference](reference/hosted-demo.md).
 
 ## Requirements
 
@@ -45,7 +45,7 @@ Do **not** set `FEATHERLESS_API_KEY` on the host. The demo never reads or forwar
 
 ## Cold starts
 
-Hosts that sleep idle instances (free tiers) add a cold start of several seconds to the first request after idle. The page loads `/api/scenarios` first; if the demo button stays disabled for a few seconds, that is the cold start. To avoid it during judging (through **25 Oct 2026**), use an always-on instance or an external uptime ping on `/health` if the host's terms allow it.
+Hosts that sleep idle instances (free tiers) add a cold start of several seconds to the first request after idle. The page loads `/api/scenarios` first; if the demo button stays disabled for a few seconds, that is the cold start. To avoid it, use an always-on instance or an external uptime ping on `/health` if the host's terms allow it.
 
 ## Example host steps
 
@@ -85,15 +85,14 @@ curl -sS -o /dev/null -w '%{http_code}\n' -X POST "$BASE/api/demo" \
   -H 'Content-Type: application/json' -d '{"scenario":"pricing-discount-change","command":"id"}'
 ```
 
-Then open `$BASE` in a browser, click **Run demo**, and check the summary card shows **BEHAVIOR CHANGED**, Tests **PASS (unchanged)**, and `{"total":315} → {"total":280}`. Check on a phone-width window as well.
+Then open `$BASE` in a browser, click **Run investigation**, and check that the verdict readout shows **BEHAVIOR CHANGED** (baseline 315 → current 280), the investigation rail completes, and the Detected pane lists one finding on `pricing · stdout` with the tests unchanged. Check on a phone-width window as well.
 
 **Failure path (local only):** `DEMO_STAGE_TIMEOUT_MS=200 npm start` (200 is the minimum) then run the demo — the baseline stage exceeds the limit, the page shows a `stage_timeout` failure message, the server returns `504`, and the temp workspace is removed. Don't set this on the public host.
 
 ## Checklist
 
-- [ ] Public repository pushed (the host builds from it)
+- [ ] The host builds from the public repository
 - [ ] Service created with the build/start commands and `/ready` health check above
 - [ ] No secrets configured on the host
 - [ ] Post-deploy verification passes (all commands above)
-- [ ] Demo URL added to `README.md`, `docs/SUBMISSION.md`, and Devpost
-- [ ] Instance stays up through **25 Oct 2026**
+- [ ] Demo URL in `README.md` matches the deployment
