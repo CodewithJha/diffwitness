@@ -14,9 +14,9 @@
 
   <header class="bar">
     <span class="mark">DiffWitness</span>
-    <span class="bar-label">Behavioral forensics console</span>
-    <span class="bar-case" title="Investigation ID — derived from the behavioral diff ID returned by the CLI">
-      <span class="micro">Case</span>
+    <span class="bar-label">Behavioral forensics instrument</span>
+    <span class="bar-case" title="Run ID — the start of the behavioral diff ID returned by the CLI">
+      <span class="micro">Run</span>
       <span class="bar-case-id" id="case-id">—</span>
     </span>
     <span class="bar-state" id="run-state" data-state="idle">
@@ -28,16 +28,7 @@
   <main>
     <section class="console" aria-labelledby="thesis">
       <div class="brief">
-        <p class="kicker">Digital forensics for software behavior</p>
         <h1 id="thesis">Your tests passed. <span class="thesis-turn">Your behavior didn’t.</span></h1>
-        <p class="lede">DiffWitness runs your workflows before and after a code change, stores the execution evidence, and shows exactly which observable behavior moved.</p>
-
-        <div class="specimen" aria-labelledby="scenario-title">
-          <p class="micro">Specimen</p>
-          <p class="specimen-title" id="scenario-title">Loading scenario…</p>
-          <p class="specimen-desc" id="scenario-description"></p>
-          <p class="specimen-change" id="scenario-change"></p>
-        </div>
 
         <div class="control">
           <button id="run" class="run" type="button" disabled>
@@ -47,14 +38,21 @@
           <p id="run-status" class="run-status" role="status" aria-live="polite"></p>
         </div>
 
-        <p class="assurance">Real CLI on the server · fresh temporary Git repo per run · MockAI explainer · nothing you send is executed</p>
+        <p class="specimen-change" id="scenario-change"></p>
+
+        <details class="note" id="specimen-note">
+          <summary><span class="micro">Specimen</span> <span id="scenario-title">Loading scenario…</span></summary>
+          <p id="scenario-description"></p>
+          <p>DiffWitness runs your workflows before and after a code change, stores the execution evidence, and shows exactly which observable behavior moved.</p>
+          <p class="note-mono">Real CLI on the server · fresh temporary Git repo per run · MockAI explainer · nothing you send is executed</p>
+        </details>
       </div>
 
       <section class="readout" id="readout" aria-labelledby="verdict" data-state="idle">
         <div class="readout-head">
-          <p class="micro">Verdict</p>
+          <p class="micro" id="readout-mode">Verdict</p>
           <h2 id="verdict" class="verdict" tabindex="-1">Awaiting run</h2>
-          <p class="readout-key" id="readout-key">Run the investigation to measure the specimen.</p>
+          <p class="readout-key" id="readout-key">Press Run investigation to take a reading.</p>
         </div>
 
         <div class="dial">
@@ -82,117 +80,123 @@
         <dl class="shift">
           <div class="shift-item shift-delta">
             <dt class="micro">Observed shift</dt>
-            <dd id="shift-delta">—</dd>
+            <dd><span id="shift-delta">—</span> <span class="shift-pct" id="shift-pct"></span></dd>
           </div>
           <div class="shift-item">
             <dt class="micro">Observations</dt>
             <dd id="shift-observations">—</dd>
           </div>
           <div class="shift-item">
-            <dt class="micro">Run time</dt>
+            <dt class="micro">Server run</dt>
             <dd id="shift-duration">—</dd>
           </div>
         </dl>
-      </section>
 
-      <ol class="chain" aria-label="Investigation sequence">
-        <li class="chain-step" id="chain-code" data-state="idle">
-          <span class="lamp" aria-hidden="true"></span>
-          <span class="chain-label">Code changed</span>
-          <span class="chain-value">—</span>
-        </li>
-        <li class="chain-step" id="chain-tests" data-state="idle">
-          <span class="lamp" aria-hidden="true"></span>
-          <span class="chain-label">Tests still passed</span>
-          <span class="chain-value">—</span>
-        </li>
-        <li class="chain-step" id="chain-behavior" data-state="idle">
-          <span class="lamp" aria-hidden="true"></span>
-          <span class="chain-label">Observable behavior moved</span>
-          <span class="chain-value">—</span>
-        </li>
-        <li class="chain-step" id="chain-evidence" data-state="idle">
-          <span class="lamp" aria-hidden="true"></span>
-          <span class="chain-label">Evidence captured</span>
-          <span class="chain-value">—</span>
-        </li>
-        <li class="chain-step" id="chain-causality" data-state="idle">
-          <span class="lamp" aria-hidden="true"></span>
-          <span class="chain-label">Causality</span>
-          <span class="chain-value">—</span>
-        </li>
-      </ol>
+        <div class="sequencer" id="sequencer" data-phase="idle">
+          <div class="sequencer-head">
+            <span class="micro sequencer-mode" id="sequencer-mode">Sequence</span>
+            <span class="sequencer-clock" id="sequencer-clock">00:00.0</span>
+          </div>
+          <div class="sequencer-track" aria-hidden="true"><span class="sequencer-sweep"></span></div>
+          <ol class="sequence" id="sequence" aria-label="Investigation sequence">
+            <li data-step="init" data-state="pending"><span class="seq-n">01</span><span class="seq-name">Initialize</span><span class="seq-value">—</span></li>
+            <li data-step="baseline" data-state="pending"><span class="seq-n">02</span><span class="seq-name">Baseline</span><span class="seq-value">—</span></li>
+            <li data-step="execute" data-state="pending"><span class="seq-n">03</span><span class="seq-name">Execute</span><span class="seq-value">—</span></li>
+            <li data-step="observe" data-state="pending"><span class="seq-n">04</span><span class="seq-name">Observe</span><span class="seq-value">—</span></li>
+            <li data-step="compare" data-state="pending"><span class="seq-n">05</span><span class="seq-name">Compare</span><span class="seq-value">—</span></li>
+            <li data-step="finding" data-state="pending"><span class="seq-n">06</span><span class="seq-name">Finding</span><span class="seq-value">—</span></li>
+            <li data-step="evidence" data-state="pending"><span class="seq-n">07</span><span class="seq-name">Evidence</span><span class="seq-value">—</span></li>
+            <li data-step="causality" data-state="pending"><span class="seq-n">08</span><span class="seq-name">Causality</span><span class="seq-value">—</span></li>
+          </ol>
+        </div>
+      </section>
     </section>
+
+    <ol class="rail" id="rail" aria-label="Investigation rail">
+      <li class="rail-step" id="rail-change" data-state="idle">
+        <span class="rail-node" aria-hidden="true"></span>
+        <span class="rail-n">01</span>
+        <span class="rail-title"><span>Change</span> <span class="rail-word">—</span></span>
+        <span class="rail-value">—</span>
+      </li>
+      <li class="rail-step" id="rail-execution" data-state="idle">
+        <span class="rail-node" aria-hidden="true"></span>
+        <span class="rail-n">02</span>
+        <span class="rail-title"><span>Execution</span> <span class="rail-word">—</span></span>
+        <span class="rail-value">—</span>
+      </li>
+      <li class="rail-step" id="rail-behavior" data-state="idle">
+        <span class="rail-node" aria-hidden="true"></span>
+        <span class="rail-n">03</span>
+        <span class="rail-title"><span>Behavior</span> <span class="rail-word">—</span></span>
+        <span class="rail-value">—</span>
+      </li>
+      <li class="rail-step" id="rail-evidence" data-state="idle">
+        <span class="rail-node" aria-hidden="true"></span>
+        <span class="rail-n">04</span>
+        <span class="rail-title"><span>Evidence</span> <span class="rail-word">—</span></span>
+        <span class="rail-value">—</span>
+      </li>
+      <li class="rail-step" id="rail-causality" data-state="idle">
+        <span class="rail-node" aria-hidden="true"></span>
+        <span class="rail-n">05</span>
+        <span class="rail-title"><span>Causality</span> <span class="rail-word">—</span></span>
+        <span class="rail-value">—</span>
+      </li>
+    </ol>
 
     <div id="failure" class="failure" role="alert" hidden></div>
 
     <div id="results" class="casefile" hidden>
-      <section class="block block-findings" aria-labelledby="h-finding" data-rv="6">
-        <div class="block-rail">
-          <p class="block-index">A</p>
-          <h2 id="h-finding" class="block-title">Findings</h2>
-          <p class="block-note">What the engine measured. Each finding cites its stored evidence.</p>
+      <section class="pane pane-incident" aria-label="Finding and evidence">
+        <div class="incident" data-reveal="finding">
+          <h2 class="pane-title micro">Detected</h2>
+          <div id="findings-list"></div>
         </div>
-        <div class="block-body" id="findings-list"></div>
-      </section>
-
-      <section class="block block-trace" aria-labelledby="h-trace" data-rv="6">
-        <div class="block-rail">
-          <p class="block-index">B</p>
-          <h2 id="h-trace" class="block-title">Execution trace</h2>
-          <p class="block-note">Workflows rerun against the baseline, and every CLI stage the server executed.</p>
-        </div>
-        <div class="block-body">
-          <ul class="rails" id="workflow-rails" aria-label="Workflows"></ul>
-          <ol class="stages" id="stage-trace" aria-label="CLI stages"></ol>
+        <div class="ledger" data-reveal="evidence">
+          <h2 class="pane-title micro" id="h-evidence">Evidence ledger</h2>
+          <ol class="ledger-list" id="evidence-list" aria-labelledby="h-evidence"></ol>
         </div>
       </section>
 
-      <section class="block block-evidence" aria-labelledby="h-evidence" data-rv="7">
-        <div class="block-rail">
-          <p class="block-index">C</p>
-          <h2 id="h-evidence" class="block-title">Evidence</h2>
-          <p class="block-note">Stored observation records from the baseline and current runs. Select an ID to copy it.</p>
+      <section class="pane pane-context" aria-label="Change surface and execution trace" data-reveal="evidence">
+        <div class="surface-pane">
+          <h2 class="pane-title micro" id="h-git">Change surface</h2>
+          <ul class="surface" id="surface-files" aria-labelledby="h-git"></ul>
+          <div class="diff-peek" id="diff-peek" aria-label="Changed lines"></div>
+          <details class="drawer">
+            <summary>Full <code>git diff</code> <span class="drawer-meta" id="surface-rev"></span></summary>
+            <pre class="diff" id="git-diff"></pre>
+          </details>
         </div>
-        <div class="block-body">
-          <ol class="register" id="evidence-list"></ol>
-        </div>
-      </section>
-
-      <section class="block block-surface" aria-labelledby="h-git" data-rv="8">
-        <div class="block-rail">
-          <p class="block-index">D</p>
-          <h2 id="h-git" class="block-title">Change surface</h2>
-          <p class="block-note">The real <code>git diff</code> applied after the baseline. Files are listed alongside findings as co-occurrence only.</p>
-        </div>
-        <div class="block-body">
-          <ul class="surface" id="surface-files"></ul>
-          <p class="surface-rev" id="surface-rev"></p>
-          <pre class="diff" id="git-diff"></pre>
+        <div class="trace-pane">
+          <h2 class="pane-title micro" id="h-trace">Execution trace</h2>
+          <ol class="timeline" id="stage-trace" aria-labelledby="h-trace"></ol>
         </div>
       </section>
 
-      <section class="causality" aria-labelledby="h-trust" data-rv="9">
+      <section class="causality" aria-labelledby="h-trust" data-reveal="causality">
         <p class="micro">Causality</p>
         <h2 id="h-trust" class="causality-title">Not established</h2>
-        <p class="causality-thesis">We show what the evidence proves, and stop there.</p>
-        <p class="causality-gap" id="causality-gap" hidden>
-          <span class="gap-end" id="gap-finding"></span>
-          <span class="gap-break">no causal link asserted</span>
-          <span class="gap-end" id="gap-files"></span>
-        </p>
-        <p class="causality-body"><strong>Causality: not established</strong> — a file changing alongside a finding is co-occurrence, never proof of cause. DiffWitness reports evidence, not guesses.</p>
-        <p class="causality-source" id="causality-source"></p>
+        <p class="causality-thesis">We show what the evidence proves. We stop there.</p>
+        <p class="causality-body"><strong>Causality: not established</strong> — a file changing alongside a finding is co-occurrence, never proof of cause.</p>
+        <details class="drawer drawer-dark">
+          <summary>Technical explanation</summary>
+          <div class="causality-detail">
+            <p>DiffWitness compares stored digests of each observation from the baseline run and the current run. A mismatch becomes a finding. Git tells us which files differ between the two runs; that list is recorded as the change surface and marked <em>changed alongside</em>.</p>
+            <p>Nothing in that process can prove a file produced a finding, so the engine records the relationship as co-occurrence and leaves causality unasserted. The explainer below is bound by the same rule.</p>
+            <p class="causality-source" id="causality-source"></p>
+          </div>
+        </details>
       </section>
 
-      <section class="block block-explain" aria-labelledby="h-explain">
-        <div class="block-rail">
-          <p class="block-index">E</p>
-          <h2 id="h-explain" class="block-title">Explanation</h2>
-          <p class="block-note"><span class="tag">Explain-only</span> Built from the evidence packet alone. It cannot change findings, status, or exit codes.</p>
-        </div>
-        <div class="block-body">
-          <p class="explain-provider" id="explain-summary">MockAI — deterministic offline explainer</p>
+      <section class="records" aria-label="Records">
+        <details class="drawer drawer-ai" id="explain-details">
+          <summary>
+            <span class="micro">Optional explanation</span>
+            <span class="drawer-title" id="explain-summary">MockAI · deterministic offline explainer</span>
+          </summary>
+          <p class="explain-disclaimer">The finding above came from the engine’s digest comparison, not from AI. This explainer only narrates the evidence packet; it cannot change findings, status, or exit codes.</p>
           <div class="explain-grid">
             <div>
               <h3 class="micro">Facts</h3>
@@ -205,31 +209,21 @@
           </div>
           <h3 class="micro">Caveats</h3>
           <ul class="explain-list explain-caveats" id="explain-caveats"></ul>
-          <details class="drawer">
-            <summary>Full explainer narrative</summary>
-            <pre id="explain-narrative"></pre>
-          </details>
-        </div>
-      </section>
-
-      <section class="block block-tech" aria-labelledby="h-tech">
-        <div class="block-rail">
-          <p class="block-index">F</p>
-          <h2 id="h-tech" class="block-title">Technical details</h2>
-          <p class="block-note">Workflow config, raw terminal output per stage, and the full JSON response.</p>
-        </div>
-        <div class="block-body">
-          <details class="drawer">
-            <summary>Workflow config and raw terminal output per stage</summary>
-            <h3 class="micro">.diffwitness/config.yaml</h3>
-            <pre id="config-text"></pre>
-            <div id="stage-list"></div>
-          </details>
-          <details class="drawer">
-            <summary>Full JSON response</summary>
-            <pre id="raw-json"></pre>
-          </details>
-        </div>
+          <h3 class="micro">Narrative</h3>
+          <pre id="explain-narrative"></pre>
+        </details>
+        <details class="drawer">
+          <summary><span class="micro">Raw output</span> <span class="drawer-title">Terminal output per stage</span></summary>
+          <div id="stage-list"></div>
+        </details>
+        <details class="drawer">
+          <summary><span class="micro">Config</span> <span class="drawer-title">.diffwitness/config.yaml</span></summary>
+          <pre id="config-text"></pre>
+        </details>
+        <details class="drawer">
+          <summary><span class="micro">JSON</span> <span class="drawer-title">Full API response</span></summary>
+          <pre id="raw-json"></pre>
+        </details>
       </section>
     </div>
   </main>
