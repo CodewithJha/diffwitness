@@ -50,7 +50,7 @@
     "demo:m7": "bash scripts/demo-m7.sh"
   },
   "dependencies": {
-    "commander": "^12.1.0",
+    "commander": "^15.0.0",
     "yaml": "^2.6.0",
     "zod": "^3.23.8"
   },
