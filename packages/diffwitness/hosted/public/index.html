@@ -38,14 +38,27 @@
           <p id="run-status" class="run-status" role="status" aria-live="polite"></p>
         </div>
 
-        <p class="specimen-change" id="scenario-change"></p>
-
-        <details class="note" id="specimen-note">
-          <summary><span class="micro">Specimen</span> <span id="scenario-title">Loading scenario…</span></summary>
-          <p id="scenario-description"></p>
-          <p>DiffWitness runs your workflows before and after a code change, stores the execution evidence, and shows exactly which observable behavior moved.</p>
-          <p class="note-mono">Real CLI on the server · fresh temporary Git repo per run · MockAI explainer · nothing you send is executed</p>
-        </details>
+        <section class="caselabel" aria-labelledby="caselabel-title">
+          <h2 class="caselabel-head micro" id="caselabel-title">Case label</h2>
+          <dl class="caselabel-rows">
+            <div class="caselabel-row">
+              <dt class="micro">Scenario</dt>
+              <dd id="scenario-title">Loading scenario…</dd>
+            </div>
+            <div class="caselabel-row">
+              <dt class="micro">Specimen</dt>
+              <dd id="label-specimen" data-empty="true">awaiting run</dd>
+            </div>
+            <div class="caselabel-row">
+              <dt class="micro">Change</dt>
+              <dd><span id="label-change" data-empty="true">awaiting run</span><span class="caselabel-sub" id="scenario-change"></span></dd>
+            </div>
+            <div class="caselabel-row">
+              <dt class="micro">Tests</dt>
+              <dd id="label-tests" data-empty="true">awaiting run</dd>
+            </div>
+          </dl>
+        </section>
       </div>
 
       <section class="readout" id="readout" aria-labelledby="verdict" data-state="idle">
@@ -179,10 +192,10 @@
         <p class="micro">Causality</p>
         <h2 id="h-trust" class="causality-title">Not established</h2>
         <p class="causality-thesis">We show what the evidence proves. We stop there.</p>
-        <p class="causality-body"><strong>Causality: not established</strong> — a file changing alongside a finding is co-occurrence, never proof of cause.</p>
         <details class="drawer drawer-dark">
           <summary>Technical explanation</summary>
           <div class="causality-detail">
+            <p><strong>Causality: not established.</strong> A file changing alongside a finding is co-occurrence, never proof of cause.</p>
             <p>DiffWitness compares stored digests of each observation from the baseline run and the current run. A mismatch becomes a finding. Git tells us which files differ between the two runs; that list is recorded as the change surface and marked <em>changed alongside</em>.</p>
             <p>Nothing in that process can prove a file produced a finding, so the engine records the relationship as co-occurrence and leaves causality unasserted. The explainer below is bound by the same rule.</p>
             <p class="causality-source" id="causality-source"></p>
@@ -190,7 +203,8 @@
         </details>
       </section>
 
-      <section class="records" aria-label="Records">
+      <section class="records" aria-labelledby="h-records">
+        <h2 class="records-title micro" id="h-records">Deeper technical details</h2>
         <details class="drawer drawer-ai" id="explain-details">
           <summary>
             <span class="micro">Optional explanation</span>
@@ -224,12 +238,20 @@
           <summary><span class="micro">JSON</span> <span class="drawer-title">Full API response</span></summary>
           <pre id="raw-json"></pre>
         </details>
+        <details class="drawer">
+          <summary><span class="micro">About</span> <span class="drawer-title">How this demo runs</span></summary>
+          <div class="about">
+            <p id="scenario-description"></p>
+            <p>DiffWitness runs your workflows before and after a code change, stores the execution evidence, and shows exactly which observable behavior moved.</p>
+            <p>Each run copies a small built-in project into a fresh temporary Git repository, runs the real DiffWitness CLI against it, and deletes the repository afterwards. Only the explainer is mocked (MockAI, offline and deterministic).</p>
+          </div>
+        </details>
       </section>
     </div>
   </main>
 
   <footer class="footer">
-    <p>Each run copies a small built-in project into a fresh temporary Git repository, runs the real DiffWitness CLI, and deletes the repository afterwards. No accounts, no tracking, no stored history.</p>
+    <p><span class="footer-mark">DiffWitness</span> Real CLI on the server · nothing you send is executed · no accounts, tracking, or database.</p>
   </footer>
 
   <p class="sr-only" id="copy-status" role="status" aria-live="polite"></p>

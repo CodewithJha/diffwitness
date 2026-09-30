@@ -200,6 +200,21 @@ function resetReadout() {
   $("readout-mode").textContent = "Verdict";
   $("case-id").textContent = "—";
   $("case-id").removeAttribute("title");
+  for (const id of ["label-specimen", "label-change", "label-tests"]) setLabel(id, null);
+}
+
+/* ── Case label (hero): filled from the response as the replay reaches each fact ── */
+
+function setLabel(id, text, state) {
+  const node = $(id);
+  node.textContent = text === null ? "awaiting run" : text;
+  node.dataset.empty = text === null ? "true" : "false";
+  if (state) node.dataset.state = state;
+  else delete node.dataset.state;
+}
+
+function surfaceText(files) {
+  return files.length ? files.map((f) => `${f.path} +${f.additions ?? "?"} ${MINUS}${f.deletions ?? "?"}`).join(", ") : "no Git change";
 }
 
 /** Counts a node from one value to another; the final text is always the real value. */
@@ -599,6 +614,9 @@ function renderFailure(result, fallbackMessage, retryAfter) {
   setSequencer("fault", failure ? "Run failed" : "Request failed");
   setRail("rail-execution", "fault", "failed", failure ? `${failure.kind}${failure.stage ? ` · ${failure.stage}` : ""}` : "no result returned");
   $("readout-mode").textContent = "No reading";
+  for (const id of ["label-specimen", "label-change", "label-tests"]) {
+    if ($(id).dataset.empty === "true") $(id).textContent = "no reading";
+  }
   $("verdict").textContent = failure ? "Run failed" : "Request failed";
   $("readout-key").textContent = failure ? failure.kind : detail;
 }
@@ -640,8 +658,10 @@ function replaySteps(result, index) {
     {
       step: "execute",
       value: stageSummary(stageById(result, "check")),
-      apply: () => setRail("rail-change", files.length ? "observed" : "idle", files.length ? "detected" : "none",
-        files.length ? files.map((f) => `${f.path} +${f.additions ?? "?"} ${MINUS}${f.deletions ?? "?"}`).join(", ") : "no Git change"),
+      apply: () => {
+        setRail("rail-change", files.length ? "observed" : "idle", files.length ? "detected" : "none", surfaceText(files));
+        setLabel("label-change", surfaceText(files));
+      },
     },
     {
       step: "observe",
@@ -651,6 +671,8 @@ function replaySteps(result, index) {
         if (shift) countTo($("num-after"), shift.before, shift.after, shift.decimals, formatNumber, formatNumber(shift.after, shift.decimals), 520);
         setRail("rail-execution", allOk ? "pass" : "fault", allOk ? "complete" : "incomplete",
           `${plural(stages.length, "stage")} · ${s.tests.workflowId} ${s.tests.result}`);
+        setLabel("label-tests", `${s.tests.workflowId} ${s.tests.result} · ${s.tests.changed ? "changed" : "unchanged"}`,
+          s.tests.result === "PASS" ? "pass" : "fault");
       },
     },
     {
@@ -666,6 +688,9 @@ function replaySteps(result, index) {
         }
         setRail("rail-behavior", s.behavior.changed ? "changed" : "pass", s.behavior.changed ? "changed" : "unchanged",
           out ? `${out.workflowId} · ${out.observationKey} · ${out.before} → ${out.after}` : `${s.behavior.workflowId} · no output change`);
+        setLabel("label-specimen", out
+          ? `${out.workflowId} workflow · ${out.observationKey}${shift && shift.key ? ` · ${shift.key}` : ""}`
+          : `${s.behavior.workflowId} workflow · no output change`, s.behavior.changed ? "changed" : undefined);
       },
     },
     {
