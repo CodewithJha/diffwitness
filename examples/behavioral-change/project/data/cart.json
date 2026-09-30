@@ -1,0 +1,6 @@
+{
+  "items": [
+    { "sku": "mug", "price": 12.5, "qty": 2 },
+    { "sku": "tea", "price": 20, "qty": 1 }
+  ]
+}

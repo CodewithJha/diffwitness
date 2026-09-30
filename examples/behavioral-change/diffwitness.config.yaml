@@ -1,0 +1,22 @@
+# DiffWitness config for the behavioral-change example.
+# Installed as .diffwitness/config.yaml after `diffwitness init` (see README.md).
+version: 1
+baseRef: main
+workflows:
+  # The behavior a customer sees: the quote for the sample cart.
+  - id: quote
+    name: Shipping quote for the sample cart
+    command: ["node", "bin/quote.mjs"]
+    timeoutMs: 10000
+  # The project's own tests (dot reporter: one "." per passing test, no timings).
+  - id: tests
+    name: Unit tests
+    command: ["node", "--test", "--test-reporter=dot", "test/shipping.test.mjs"]
+    timeoutMs: 20000
+assumptions:
+  - id: shipping-rules-stable
+    description: The quote for the sample cart only changes when shipping rules change on purpose.
+ai:
+  provider: mock
+execution:
+  envPolicy: path
