@@ -1,5 +1,7 @@
 # DiffWitness — Product Requirements Document
 
+> **Historical planning document.** Written before implementation to choose and scope the product. Some statements (for example "why (evidence-backed)" and "which assumptions were affected") describe goals that the shipped CLI deliberately does not claim: DiffWitness never establishes causality and does not infer affected assumptions. For current behavior see the [README](../README.md), the [CLI reference](reference/cli.md) and the [architecture overview](architecture/README.md).
+
 **Status:** Selected product **direction** for HACK47 OFFGRID (not permanently locked until M0 acceptance / validation if required)  
 **Date:** 22 September 2026  
 **Supersedes:** an earlier abandoned direction (see [`archive/`](../archive/README.md))  
@@ -103,7 +105,7 @@ CLI report (human + JSON) / CI gate
 
 **Deferred (post-MVP):** `watch`, interactive TUI, multi-language tracers, auto-instrumentation platforms, PR bot posting.
 
-Full flags/exits: `docs/CLI-SPECIFICATION.md`.
+Full flags/exits: `docs/reference/cli.md`.
 
 ---
 
@@ -161,7 +163,7 @@ No AI required to compute the diff.
 
 > **Not implemented / superseded — see DECISION-LOG (finalization).** No causal narration: causality is never established; Git changes are co-occurrence only; AI explains evidence and labels hypotheses.
 
-See `docs/AI-ARCHITECTURE.md`.
+See `docs/architecture/ai.md`.
 
 ---
 
@@ -169,7 +171,7 @@ See `docs/AI-ARCHITECTURE.md`.
 
 - **Human (default):** progressive disclosure — summary → changed findings → evidence pointers → optional explain section.
 - **JSON (`--json`):** stable schema for CI and history.
-- **CI:** exit codes per `docs/CLI-SPECIFICATION.md` (behavioral change ≠ analysis error).
+- **CI:** exit codes per `docs/reference/cli.md` (behavioral change ≠ analysis error).
 
 ---
 

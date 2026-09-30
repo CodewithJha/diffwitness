@@ -1,5 +1,7 @@
 # Milestone
 
+> **Build-phase template** used to plan each milestone of the initial build. Kept for reference; contributions use the [pull request template](../.github/pull_request_template.md).
+
 ## Objective
 
 ## User-visible outcome

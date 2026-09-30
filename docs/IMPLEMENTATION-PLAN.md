@@ -1,5 +1,7 @@
 # DiffWitness — Implementation Plan
 
+> **Historical build log.** The milestone plan and completion records from the initial build (M0–M7). Test counts and statuses reflect the time each record was written. For the current state see the [CHANGELOG](../CHANGELOG.md) and [ROADMAP](ROADMAP.md).
+
 **Status:** M0–M7 implemented; finalization for submission in progress  
 **Date:** 22 September 2026  
 **PRD:** `docs/DIFFWITNESS-PRD.md`  
@@ -352,7 +354,7 @@ cd packages/diffwitness && npm run typecheck && npm test && npm run build
 - `explain --provider featherless`; `ci --explain --provider featherless` preserves M4 exit (findings stay findings on AI fail)
 - JSON metadata: `provider` / `model` / `promptVersion` / `explanationStatus`
 - Opt-in live test: `DIFFWITNESS_FEATHERLESS_LIVE=1` + `FEATHERLESS_API_KEY` (skipped otherwise)
-- Provider docs: `docs/FEATHERLESS-PROVIDER.md`
+- Provider docs: `docs/reference/featherless-provider.md`
 
 ### Deferred (intentionally not M5)
 

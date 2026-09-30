@@ -1,5 +1,7 @@
 # Engineering Standards — HACK47 OFFGRID
 
+> **Build-phase process document.** The engineering standards used while building DiffWitness. The contributor-facing rules are summarized in [CONTRIBUTING.md](../CONTRIBUTING.md); this document keeps the fuller rationale.
+
 **Applies after a product is selected.** These standards define production-quality software, not hackathon throwaway code.
 
 **Current product direction (27 Sep 2026):** DiffWitness — local-first behavioral intelligence CLI. Status: M0–M7 implemented in `packages/diffwitness/` (M7 = hosted trusted demo, 29 Sep 2026); finalization for submission in progress. See [`archive/research/RESEARCH-STATUS.md`](../archive/research/RESEARCH-STATUS.md).
@@ -18,7 +20,7 @@ These add to — not replace — the standards below.
 6. **Config:** workflows, model IDs, endpoints, and keys from env/config — never hardcoded secrets or environment-specific paths in source.
 7. **Small surface:** prefer one modular CLI binary over microservices or agent meshes.
 
-Details: `docs/AI-ARCHITECTURE.md`, `docs/THREAT-MODEL.md`, `docs/CLI-SPECIFICATION.md`.
+Details: `docs/architecture/ai.md`, `docs/security/threat-model.md`, `docs/reference/cli.md`.
 
 ---
 

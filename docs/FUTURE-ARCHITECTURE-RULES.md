@@ -1,5 +1,7 @@
 # Future Architecture Rules — HACK47 OFFGRID
 
+> **Historical process document** from before the product was selected. Kept for context; it does not describe current architecture. See the [architecture overview](architecture/README.md).
+
 **Process only.** Do not design the actual product architecture in this document or in the repo until a product is selected.
 
 ---
@@ -16,9 +18,9 @@ A PRD and technical specification must describe an **actual selected** product. 
 
 **Product quality does not compensate for a weak product.** Engineering standards, milestones, and polish must not be used to justify building something that failed research. No architecture, agents, or “practice” services until selection.
 
-Historical note: an earlier direction briefly advanced to planning (22 Sep) and was then **abandoned** (see [`archive/`](../archive/README.md)). As of **22 September 2026 (later)**, product direction is **DiffWitness** with planning docs as SoT. Status: M0–M7 implemented; finalization for submission in progress. See [`archive/research/RESEARCH-STATUS.md`](../archive/research/RESEARCH-STATUS.md), `docs/DIFFWITNESS-PRD.md`, `docs/ARCHITECTURE.md`.
+Historical note: an earlier direction briefly advanced to planning (22 Sep) and was then **abandoned** (see [`archive/`](../archive/README.md)). As of **22 September 2026 (later)**, product direction is **DiffWitness** with planning docs as SoT. Status: M0–M7 implemented; finalization for submission in progress. See [`archive/research/RESEARCH-STATUS.md`](../archive/research/RESEARCH-STATUS.md), `docs/DIFFWITNESS-PRD.md`, `docs/architecture/README.md`.
 
-**Still forbidden:** empty services, fake repositories, placeholder APIs, and application code *beyond the authorized milestone*. DiffWitness M1 is complete in `packages/diffwitness/`; do not start M2 without approval. See `docs/DIFFWITNESS-PRD.md`, `docs/ARCHITECTURE.md`.
+**Still forbidden:** empty services, fake repositories, placeholder APIs, and application code *beyond the authorized milestone*. DiffWitness M1 is complete in `packages/diffwitness/`; do not start M2 without approval. See `docs/DIFFWITNESS-PRD.md`, `docs/architecture/README.md`.
 
 ---
 

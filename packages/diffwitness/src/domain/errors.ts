@@ -12,7 +12,7 @@ export type ErrorCategory =
   | "provider"
   | "internal";
 
-/** CLI exit classes from docs/CLI-SPECIFICATION.md */
+/** CLI exit classes from docs/reference/cli.md */
 export type ExitClass =
   | "success"
   | "findings"

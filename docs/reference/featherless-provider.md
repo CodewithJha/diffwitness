@@ -1,6 +1,8 @@
-# Featherless provider (DiffWitness M5)
+# Featherless provider (optional)
 
-**Verified against Featherless docs (22 September 2026)** via https://featherless.ai/docs
+Featherless is the one live model provider DiffWitness supports. It is opt-in: the default provider is the offline MockAI, and nothing in the hosted demo or the test suite calls Featherless. Like every provider it only explains an existing result; see [AI architecture](../architecture/ai.md).
+
+The API contract below was checked against the Featherless documentation (https://featherless.ai/docs) in September 2026.
 
 ## API contract (verified)
 
@@ -13,7 +15,7 @@
 | Request | `{ model, messages[{role,content}], temperature?, max_tokens?, response_format? }` |
 | Response | `{ choices[{ message: { content } }], model?, usage? }` |
 | Structured output | Official `/v1/chat/completions` parameter table does **not** list `response_format`. Featherless tool-calling docs mention `response_format: { type: "json_object" }` for JSON. DiffWitness **prefers** sending it (`preferJsonObjectFormat: true`) and still parses `message.content` as Explanation JSON. |
-| Model | Config-driven (`ai.featherless.model` or `ai.model`). Default in `init` config: `Qwen/Qwen2.5-7B-Instruct` (from Featherless quickstart examples — not hardcoded in domain). |
+| Model | Config-driven (`ai.featherless.model` or `ai.model`); required when the provider is `featherless`. The `init` template suggests `Qwen/Qwen2.5-7B-Instruct` in a comment (from the Featherless quickstart examples); no model id is hardcoded in the code paths. |
 
 ### Error codes (docs + DiffWitness mapping)
 
@@ -45,8 +47,10 @@ ai:
     preferJsonObjectFormat: true
 ```
 
+All fields are described in the [configuration reference](configuration.md#aifeatherless).
+
 ```bash
-export FEATHERLESS_API_KEY=...   # from https://featherless.ai/account/api-keys
+export FEATHERLESS_API_KEY=...   # your own key, from https://featherless.ai/account/api-keys
 diffwitness explain --provider featherless
 # or
 diffwitness ci --explain --provider featherless
@@ -56,24 +60,25 @@ diffwitness ci --explain --provider featherless
 
 - Only the **redacted** EvidencePacket / ExplanationPacket is sent.
 - No repo path, Git, Storage, ProcessExecutor, or raw env on the provider.
-- `privacy.sendCodeBodies` remains false by default; packet never includes file bodies.
+- The packet never includes file contents (`privacy.sendCodeBodies` currently has no effect).
 - API key never appears in logs, JSON metadata, or error strings (Bearer redacted).
 
 ## AI independence
 
 DiffEngine owns `clean` / `findings` / `analysis_error`. Featherless failure → `explain_error` (exit 4); findings stay findings; never silent mock fallback; never rewrite status to clean.
 
-## Offline vs live demos
+## Offline vs live
 
-| Demo | Command | Network |
+| Mode | Command | Network |
 |---|---|---|
-| Offline (default) | `npm run demo:m4` / `explain --provider mock` | None |
-| Live (optional) | `DIFFWITNESS_FEATHERLESS_LIVE=1` + `FEATHERLESS_API_KEY` then run live test / `explain --provider featherless` | Featherless only |
+| Offline (default) | `diffwitness explain` / `explain --provider mock` | None |
+| Live (optional) | `explain --provider featherless` with `FEATHERLESS_API_KEY` set | Featherless only |
 
 ## Live test
 
 ```bash
-DIFFWITNESS_FEATHERLESS_LIVE=1 FEATHERLESS_API_KEY=... npm test -- tests/featherless-live.test.ts
+cd packages/diffwitness
+DIFFWITNESS_FEATHERLESS_LIVE=1 FEATHERLESS_API_KEY=... node --import tsx --test tests/featherless-live.test.ts
 ```
 
-Skipped automatically when env vars are missing — not part of normal CI.
+Skipped automatically when either variable is missing, so it never runs in CI. The rest of the Featherless adapter is tested against mocked HTTP.

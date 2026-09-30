@@ -1,6 +1,6 @@
 /**
  * AnalysisStatus discrimination — analysis_error must never be treated as clean.
- * See docs/TECHNICAL-SPECIFICATION.md §2.2 and §11.
+ * See docs/architecture/technical-specification.md §2.2 and §11.
  */
 
 export const ANALYSIS_STATUSES = ["clean", "findings", "analysis_error"] as const;

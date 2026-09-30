@@ -1,14 +1,14 @@
-# DiffWitness — AI Architecture
+# AI architecture
 
-**Date:** 22 September 2026  
-**Status:** **M6 implemented** — MockAI + Featherless; EvidencePacket.v2 change surface (co-occurrence only); DiffEngine remains SoT  
-**Principle:** Evidence-first, AI-second. Progressive evidence reduction. Fail soft. Provider-independent.
+**Principle:** evidence first, AI second. Progressive evidence reduction. Fail soft. Provider-independent.
+
+The pipeline is: deterministic finding → evidence packet → optional explanation. The diff engine produces findings from evidence digests without any AI. `explain` then builds a bounded, redacted packet from that result and hands it to a provider, which can only return text that is validated before it is shown. Implemented providers: MockAI (default, offline), `none`, and Featherless (opt-in). Overview: [Architecture](README.md#3-optional-ai).
 
 ---
 
-## 1. Where AI is necessary
+## 1. Where AI is used
 
-AI is **optional** for the core job. Deterministic BehavioralDiff is the product spine.
+AI is **optional** for the core job. The deterministic BehavioralDiff is the product spine.
 
 AI is used when the user runs `explain` to:
 
@@ -28,7 +28,7 @@ AI is **not** used to:
 
 ## 2. EvidencePacket / ExplanationPacket
 
-Wire schema **EvidencePacket.v2** (M6; application alias: **ExplanationPacket**):
+Wire schema **EvidencePacket.v2** (application alias: **ExplanationPacket**):
 
 ```text
 EvidencePacket.v2
@@ -79,7 +79,7 @@ Never: full repo tarball, unbounded stderr, raw env, inventing excerpts, file co
 
 ## 4. Prompts as versioned product logic
 
-Implemented: `packages/diffwitness/src/infrastructure/ai/prompts/explain.v2.ts` (`EXPLAIN_PROMPT_VERSION = explain.v2`; v1 removed in M6).
+Implemented: `packages/diffwitness/src/infrastructure/ai/prompts/explain.v2.ts` (`EXPLAIN_PROMPT_VERSION = explain.v2`; v1 was removed when the change surface was added).
 
 - System: evidence-bound explainer; cite IDs; facts vs hypotheses; refuse clean bill of health on `analysis_error`; no pass/fail; no claim to inspect repo/execute  
 - v2 adds: change-surface membership is **co-occurrence only, never proof of causality**; no causal claims in FACTS; do not relate findings to files unless `associated`; empty surface → say no source change, do not guess why; no file contents / line diffs available  
@@ -145,11 +145,11 @@ Explanation.v1
 |---|---|
 | **MockAIProvider** | **Required**; deterministic; offline demos; no fs/network/process; names change-surface files as co-occurrence + “Causality: not established” caveat |
 | **none** | Skip explanation; findings remain |
-| **FeatherlessAIProvider** | **M5**; OpenAI-compatible HTTP; optional; explain-only |
+| **FeatherlessAIProvider** | Optional; OpenAI-compatible HTTP; explain-only; key from env (`FEATHERLESS_API_KEY` by default) |
 
 `AiProvider` surface: **`explain(packet)` only**.
 
-Featherless details: `docs/FEATHERLESS-PROVIDER.md`.
+Featherless details: [Featherless provider](../reference/featherless-provider.md).
 
 Domain stays free of `chat.completions` / Bearer shapes — HTTP adapter only under `infrastructure/ai/featherless/`.
 

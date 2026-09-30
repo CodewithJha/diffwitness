@@ -1,8 +1,18 @@
-# DiffWitness — Technical Specification
+# DiffWitness — Technical Specification (design document)
 
-**Status:** Source of truth for DiffWitness planning (M6 change surface implemented)  
-**Date:** 22 September 2026 (M6 update 27 September 2026)  
-**PRD:** `docs/DIFFWITNESS-PRD.md`
+> **Design document, written before and during implementation.** It explains the domain model, invariants and pipeline, and most of it matches the code. For current behavior, the references win: [CLI reference](../reference/cli.md), [configuration reference](../reference/configuration.md), [architecture overview](README.md).
+>
+> Known differences from the shipped code:
+>
+> - There is no `history.jsonl`, `RunRecord` history, `listHistory`, or `history` command. Stored comparisons live in `.diffwitness/runs/`.
+> - There is no `.diffwitness/config.schema.json`, and config is YAML only (`.diffwitness/config.yaml`).
+> - `artifactGlobs` accepts exact relative paths only; globs such as `**` are rejected.
+> - There is no `when.paths` workflow selection and no environment-variable interpolation in config values (for example `${DIFFWITNESS_MODEL}`).
+> - `execution.maxConcurrent` and `privacy.sendCodeBodies` are accepted but have no effect.
+> - `--base` never materializes a base worktree; comparisons always use the stored active baseline.
+
+**Originally written:** 22 September 2026 (change-surface update 27 September 2026)  
+**Planning background:** [`docs/DIFFWITNESS-PRD.md`](../DIFFWITNESS-PRD.md) (historical)
 
 ---
 
@@ -71,7 +81,7 @@ ChangeSurface (M6; attached as BehavioralDiff.changeSurface — additive, schema
   truncation { truncated, filesTotal, filesIncluded, locationsTotal, locationsIncluded,
                omittedLongPaths, gitOutputCapped, limits }
 
-EvidencePacket (v2 since M6 — see docs/AI-ARCHITECTURE.md)
+EvidencePacket (v2 since M6 — see ai.md)
   # bundle sent to AI (reduced)
   diffSummary, findings[], evidenceExcerpts[], assumptions[], changeSurface? (files + association + causality)
 
@@ -219,7 +229,7 @@ output: Explanation {
 Validation failure → `explain` reports error; does not alter BehavioralDiff status.
 
 **MockAIProvider:** deterministic template over packet (no network).  
-**FeatherlessAdapter:** OpenAI-compatible HTTP (`https://api.featherless.ai/v1`); key from env (`FEATHERLESS_API_KEY`); timeout; bounded response; no retry storms. See `docs/FEATHERLESS-PROVIDER.md`.
+**FeatherlessAdapter:** OpenAI-compatible HTTP (`https://api.featherless.ai/v1`); key from env (`FEATHERLESS_API_KEY`); timeout; bounded response; no retry storms. See [Featherless provider](../reference/featherless-provider.md).
 
 ---
 
@@ -253,7 +263,7 @@ execution:
   maxConcurrent: 1
 ```
 
-No hardcoded API keys, ports, or model IDs in source — env/config only (`docs/ENGINEERING-STANDARDS.md`).
+No hardcoded API keys, ports, or model IDs in source — env/config only ([`docs/ENGINEERING-STANDARDS.md`](../ENGINEERING-STANDARDS.md)).
 
 ---
 
@@ -290,7 +300,7 @@ Recommend gitignore: `cache/`, large blobs optional policy; commit config + smal
 
 ## 12. CLI contracts
 
-See `docs/CLI-SPECIFICATION.md`. Application layer maps commands → use cases; domain never imports CLI argv parsers.
+See the [CLI reference](../reference/cli.md). Application layer maps commands → use cases; domain never imports CLI argv parsers.
 
 ---
 

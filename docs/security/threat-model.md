@@ -1,7 +1,6 @@
-# DiffWitness — Threat Model
+# DiffWitness — Threat model
 
-**Date:** 22 September 2026  
-**Scope:** Planning threat model for local-first CLI that executes repository workflows and optionally sends reduced evidence to an AI provider.
+**Scope:** the local-first CLI, which executes repository workflows and optionally sends reduced evidence to an AI provider, and the hosted demo server. First written 22 September 2026 as a planning document; sections 6–8 record the controls as implemented. For a summary of the controls that exist today, start with the [security model](README.md).
 
 ---
 
@@ -24,7 +23,7 @@
 - Malicious dependency / malicious test in analyzed repo  
 - Malicious PR author targeting DiffWitness CI  
 - Compromised AI provider / MITM on provider HTTP  
-- Curious judge on shared demo host  
+- Anonymous visitor on the shared hosted demo  
 
 ---
 
@@ -56,10 +55,11 @@
 **Threat:** Tokens printed by tests uploaded to provider or committed.  
 **Controls:**
 
-- Redaction patterns + env deny-list  
-- Default `sendCodeBodies: false`  
-- `.diffwitness/cache` gitignored  
-- Warn on high-entropy string detection (heuristic, best-effort)  
+- Per-workflow `normalize.redactEnv`: values of named env vars are masked before hashing and storage  
+- Pattern redaction (Bearer tokens, JWTs, AWS access key ids, `api_key=`/`token=`/`password=`-style assignments) on the evidence packet before any AI provider sees it  
+- The evidence packet never contains file contents  
+- `.diffwitness/` operational directories are gitignored by the `init` layout  
+- Not implemented: high-entropy secret detection. Redaction is best-effort; treat evidence as potentially sensitive  
 
 ### T4 — Unsafe AI-driven execution
 
@@ -89,11 +89,11 @@
 **Threat:** Malicious npm dependency in DiffWitness itself.  
 **Controls:**
 
-- Minimal dependencies; lockfile when coding starts; prefer stdlib  
+- Minimal dependencies (three runtime: `commander`, `yaml`, `zod`); committed lockfiles; `npm ci` in CI; Dependabot for npm and GitHub Actions; prefer stdlib  
 
 ### T8 — Shared demo multi-tenant abuse
 
-**Threat:** Judge uploads arbitrary repo to hosted runner.  
+**Threat:** A visitor tries to run an arbitrary repository or command on the hosted demo.  
 **Controls:**
 
 - MVP demo does not accept arbitrary repos; fixed fixture or local-run instructions  
@@ -107,8 +107,8 @@
 | STRIDE | Example | Control theme |
 |---|---|---|
 | Spoofing | Fake baseline | Content addressing + Git SHA in records |
-| Tampering | Edit evidence blobs | Immutable blob store; re-hash on read optional |
-| Repudiation | “Check passed” | RunRecord history.jsonl |
+| Tampering | Edit evidence blobs | Blobs are named by their SHA-256 digest and never overwritten; comparisons use the digests in evidence records. Blobs are not re-verified on read, and local files are only as trustworthy as the machine |
+| Repudiation | “Check passed” | Stored comparisons in `.diffwitness/runs/` with evidence IDs (no append-only history log) |
 | Info disclosure | Secrets to AI | Redaction + opt-in provider |
 | DoS | Infinite test | Timeouts / concurrency 1 |
 | Elevation | AI → root shell | No AI execution |
