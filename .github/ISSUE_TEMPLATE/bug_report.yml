@@ -1,0 +1,62 @@
+name: Bug report
+description: Something in DiffWitness doesn't work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. For security issues, use the private advisory form instead (see SECURITY.md).
+        Please remove secrets, tokens and private paths from anything you paste.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI (init, baseline, check, explain, ci)
+        - Configuration
+        - Explanations / AI providers
+        - Hosted demo
+        - Documentation or example
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you run, and what did you see? Include the exact command and its output.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: A minimal config and commands, ideally starting from `examples/behavioral-change`.
+    validations:
+      required: true
+  - type: textarea
+    id: config
+    attributes:
+      label: Relevant `.diffwitness/config.yaml`
+      render: yaml
+  - type: input
+    id: version
+    attributes:
+      label: DiffWitness version or commit
+      description: Output of `diffwitness --version`, or the commit you built from.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, `node --version`, `git --version`.
+    validations:
+      required: true
