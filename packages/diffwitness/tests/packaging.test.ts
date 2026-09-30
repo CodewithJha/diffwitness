@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +26,11 @@ describe("packaging", () => {
   it("npm pack produces tarball with dist CLI entry", async () => {
     // Ensure dist exists
     await execFileAsync("npm", ["run", "build"], { cwd: packageRoot });
+    if (process.platform !== "win32") {
+      // `npm link` points at dist/cli/main.js directly, so a rebuild must keep it executable.
+      const { mode } = await stat(path.join(packageRoot, "dist", "cli", "main.js"));
+      assert.ok(mode & 0o100, "dist/cli/main.js must be executable after build");
+    }
     const tmp = await mkdtemp(path.join(os.tmpdir(), "diffwitness-pack-"));
     try {
       const { stdout } = await execFileAsync("npm", ["pack", "--pack-destination", tmp], {
