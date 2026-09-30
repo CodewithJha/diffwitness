@@ -357,19 +357,12 @@ function renderFinding(f, i, index) {
   const shift = f.before && f.after ? measureShift(f.before.preview, f.after.preview) : null;
   const beforeRecord = f.before ? index.byId.get(f.before.evidenceId) : null;
   const afterRecord = f.after ? index.byId.get(f.after.evidenceId) : null;
-  const shiftText = shift
-    ? `Δ ${formatSigned(shift.delta, shift.decimals)}${shift.pct === null ? "" : ` · ${formatSigned(shift.pct, 1)}%`}`
-    : "shift shown verbatim";
+  const deltaText = shift ? `Δ ${formatSigned(shift.delta, shift.decimals)}` : "non-numeric";
+  const pctText = shift && shift.pct !== null ? `${formatSigned(shift.pct, 1)}%` : "";
   return el("article", { className: "finding", id: `finding-${i + 1}`, "aria-labelledby": `finding-title-${i + 1}` }, [
-    el("div", { className: "finding-head" }, [
-      el("p", { className: "finding-index" }, [
-        el("span", { className: "micro", text: "Finding" }),
-        el("span", { className: "finding-number", text: pad2(i + 1) }),
-      ]),
-      el("p", { className: `severity severity-${f.severity}` }, [
-        el("span", { className: "micro", text: "Severity" }),
-        el("span", { className: "severity-value", text: f.severity }),
-      ]),
+    el("p", { className: "finding-index" }, [
+      el("span", { className: "finding-tag", text: "Finding" }),
+      el("span", { className: "finding-number", text: pad2(i + 1) }),
     ]),
     el("h3", { className: "finding-title", id: `finding-title-${i + 1}`, text: `${f.observationKey} behavioral shift` }),
     el("p", { className: "finding-summary", text: `${f.workflowId} workflow · ${f.summary}` }),
@@ -379,14 +372,22 @@ function renderFinding(f, i, index) {
         el("code", { className: "fm-value", text: previewText(f.before) }),
         citeLink(beforeRecord, f.before && f.before.evidenceId),
       ]),
-      el("div", { className: "fm-shift" }, [
-        el("span", { className: "fm-arrow", "aria-hidden": "true" }),
-        el("span", { className: "fm-delta", text: shiftText }),
-      ]),
+      el("span", { className: "fm-arrow", "aria-hidden": "true" }),
       el("div", { className: "fm-side is-current" }, [
         el("span", { className: "micro", text: "Current" }),
         el("code", { className: "fm-value", text: previewText(f.after) }),
         citeLink(afterRecord, f.after && f.after.evidenceId),
+      ]),
+    ]),
+    el("div", { className: "finding-verdict" }, [
+      el("p", { className: "fv-delta" }, [
+        el("span", { className: "micro", text: "Observed shift" }),
+        el("span", { className: "fv-delta-value", text: deltaText }),
+        pctText ? el("span", { className: "fv-delta-pct", text: pctText }) : null,
+      ]),
+      el("p", { className: `severity severity-${f.severity}` }, [
+        el("span", { className: "micro", text: "Severity" }),
+        el("span", { className: "severity-value", text: f.severity }),
       ]),
     ]),
     el("details", { className: "drawer drawer-inline" }, [
@@ -419,16 +420,17 @@ function renderEvidence(index) {
         el("span", { className: "entry-state" }, [el("span", { className: "lamp", "aria-hidden": "true" }), el("span", { text: "Captured" })]),
       ]),
       copyButton(r.id),
-      r.preview !== null ? el("code", { className: "entry-preview", text: r.preview }) : null,
-      el("p", { className: "entry-cite", text: r.citedBy.length ? `cited by ${r.citedBy.join(", ")}` : "held · not cited by a finding" }),
     ]),
   );
   const metadata = el("details", { className: "drawer drawer-inline ledger-meta" }, [
-    el("summary", { text: "Full evidence IDs" }),
-    el("dl", { className: "kv" }, index.records.flatMap((r) => [
-      el("dt", { text: `${evidenceLabel(r)} · ${r.role}` }),
-      el("dd", { text: r.id }),
-    ])),
+    el("summary", { text: "Evidence metadata" }),
+    ...index.records.map((r) =>
+      el("dl", { className: "kv kv-record" }, [
+        el("dt", { text: evidenceLabel(r) }), el("dd", { text: r.role }),
+        el("dt", { text: "Evidence ID" }), el("dd", { text: r.id }),
+        el("dt", { text: "Cited by" }), el("dd", { text: r.citedBy.length ? r.citedBy.join(", ") : "not cited by a finding" }),
+        el("dt", { text: "Preview" }), el("dd", { text: r.preview !== null ? r.preview : "not in the finding packet" }),
+      ])),
   ]);
   $("evidence-list").replaceChildren(...entries);
   $("evidence-list").parentElement.querySelector(".ledger-meta")?.remove();
@@ -528,9 +530,10 @@ function renderTimeline(result) {
   $("stage-trace").replaceChildren(
     ...result.stages.map((stage, i) => {
       const ok = stage.exitCode === 0;
+      const detected = ok && stage.id === "check" && result.summary && result.summary.behavior.changed;
       const bar = el("span", { className: "tl-bar", "aria-hidden": "true" });
       bar.style.setProperty("--w", `${Math.max(3, (stage.durationMs / longest) * 100)}%`);
-      return el("li", { className: "tl-item", "data-state": ok ? "pass" : "fault" }, [
+      return el("li", { className: "tl-item", "data-state": detected ? "changed" : ok ? "pass" : "fault" }, [
         el("span", { className: "tl-node", "aria-hidden": "true" }),
         el("p", { className: "tl-head" }, [
           el("span", { className: "tl-n", text: pad2(i + 1) }),
