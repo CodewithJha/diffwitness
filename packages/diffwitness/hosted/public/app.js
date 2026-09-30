@@ -1,8 +1,13 @@
 // DiffWitness hosted demo page. Renders server-returned CLI results only.
 // All CLI-derived text goes through textContent — never innerHTML.
+//
+// Honesty rule for motion: while POST /api/demo is in flight the page only knows that a request
+// is running, so it shows an elapsed clock and an indeterminate track. Stage-by-stage progress is
+// shown only after the complete response arrives, as a labelled replay of that captured result.
 "use strict";
 
 const SCENARIO_ID = "pricing-discount-change";
+const REPLAY_STEP_MS = 230;
 
 /* ── DOM helpers ─────────────────────────────────────────────────────────── */
 
@@ -61,15 +66,41 @@ function formatSigned(n, decimals) {
   return `${n < 0 ? MINUS : "+"}${Math.abs(n).toFixed(decimals)}`;
 }
 
-/** Investigation ID: the behavioral diff ID's type prefix plus its first 8 characters, verbatim. */
+/** Numeric shift between two preview strings, or null when either side is not a single number. */
+function measureShift(beforeText, afterText) {
+  const before = parseMeasure(beforeText);
+  const after = parseMeasure(afterText);
+  if (before === null || after === null) return null;
+  const decimals = Math.max(decimalsOf(before.value), decimalsOf(after.value));
+  const delta = after.value - before.value;
+  return {
+    before: before.value,
+    after: after.value,
+    key: after.key,
+    decimals,
+    delta,
+    pct: before.value !== 0 ? (delta / Math.abs(before.value)) * 100 : null,
+  };
+}
+
+/** Run ID: the behavioral diff ID's type prefix plus its first 8 characters, verbatim. */
 function shortId(id) {
   if (typeof id !== "string" || id.length === 0) return "—";
   const cut = id.indexOf("_");
   return cut === -1 ? id.slice(0, 8) : id.slice(0, cut + 9);
 }
 
+/** Readable evidence ID: prefix + first 8 + last 4, the full ID stays available for copying. */
+function shortEvidenceId(id) {
+  return id.length > 20 ? `${id.slice(0, 11)}…${id.slice(-4)}` : id;
+}
+
 function pad2(n) {
   return String(n).padStart(2, "0");
+}
+
+function plural(n, word) {
+  return `${n} ${word}${n === 1 ? "" : "s"}`;
 }
 
 function nicestep(raw) {
@@ -78,9 +109,15 @@ function nicestep(raw) {
   return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * exp;
 }
 
+function formatClock(ms) {
+  const total = Math.max(0, ms) / 1000;
+  const minutes = Math.floor(total / 60);
+  return `${pad2(minutes)}:${(total - minutes * 60).toFixed(1).padStart(4, "0")}`;
+}
+
 /* ── Run state ──────────────────────────────────────────────────────────── */
 
-const STATE_TEXT = { idle: "Idle", running: "Running", changed: "Behavior changed", clean: "No change", error: "Fault" };
+const STATE_TEXT = { idle: "Idle", running: "Running", replay: "Replaying", changed: "Behavior changed", clean: "No change", error: "Fault" };
 const VERDICT_STATE = { "BEHAVIOR CHANGED": "changed", "NO BEHAVIOR CHANGE": "clean", "ANALYSIS ERROR": "error" };
 
 function setRunState(state) {
@@ -89,77 +126,44 @@ function setRunState(state) {
   $("readout").dataset.state = state;
 }
 
-let elapsedTimer = null;
-
-function setBusy(busy) {
+function setBusy(busy, label) {
   const button = $("run");
   button.disabled = busy;
   button.setAttribute("aria-busy", busy ? "true" : "false");
-  $("run-label").textContent = busy ? "Running…" : "Run investigation again";
-  clearInterval(elapsedTimer);
-  if (!busy) return;
-  const started = performance.now();
-  const tick = () => {
-    $("readout-key").textContent = `Executing baseline → change → check → explain · ${((performance.now() - started) / 1000).toFixed(1)} s`;
-  };
+  $("run-label").textContent = label || (busy ? "Investigating…" : "Run investigation again");
+}
+
+/* ── In-flight clock (request only; no fake stage progress) ─────────────── */
+
+let clockTimer = null;
+let clockStarted = 0;
+
+function startClock() {
+  clockStarted = performance.now();
+  const tick = () => { $("sequencer-clock").textContent = formatClock(performance.now() - clockStarted); };
   tick();
-  elapsedTimer = setInterval(tick, 100);
+  clearInterval(clockTimer);
+  clockTimer = setInterval(tick, 100);
+}
+
+function stopClock() {
+  clearInterval(clockTimer);
+  clockTimer = null;
+  const elapsed = performance.now() - clockStarted;
+  $("sequencer-clock").textContent = formatClock(elapsed);
+  return elapsed;
+}
+
+function setSequencer(phase, mode) {
+  $("sequencer").dataset.phase = phase;
+  $("sequencer-mode").textContent = mode;
 }
 
 /* ── Readout: verdict, baseline → current, measurement line ─────────────── */
 
-function renderVerdict(summary) {
-  const state = VERDICT_STATE[summary.verdict] || "error";
-  setRunState(state);
-  $("verdict").textContent = summary.verdict;
-}
-
-function renderReadout(result) {
-  const s = result.summary;
-  const out = s.output;
-  const before = out ? parseMeasure(out.before) : null;
-  const after = out ? parseMeasure(out.after) : null;
-  const numeric = before !== null && after !== null;
-
-  $("readout-key").textContent = out
-    ? `workflow ${out.workflowId} · ${out.observationKey}${numeric && after.key ? ` · ${after.key}` : ""}`
-    : "No output change recorded for the behavior workflow.";
-  $("raw-before").textContent = out ? out.before : "";
-  $("raw-after").textContent = out ? out.after : "";
-
-  const dial = $("readout");
-  dial.classList.toggle("is-verbatim", Boolean(out) && !numeric);
-
-  if (!out) {
-    $("num-before").textContent = "—";
-    $("num-after").textContent = "—";
-    $("shift-delta").textContent = "none recorded";
-    $("scale").hidden = true;
-  } else if (!numeric) {
-    $("num-before").textContent = out.before;
-    $("num-after").textContent = out.after;
-    $("shift-delta").textContent = "non-numeric · shown verbatim";
-    $("scale").hidden = true;
-  } else {
-    const decimals = Math.max(decimalsOf(before.value), decimalsOf(after.value));
-    const delta = after.value - before.value;
-    $("num-before").textContent = formatNumber(before.value, decimals);
-    $("num-after").textContent = formatNumber(after.value, decimals);
-    const pct = before.value !== 0 ? ` · ${formatSigned((delta / Math.abs(before.value)) * 100, 1)}%` : "";
-    $("shift-delta").textContent = `Δ ${formatSigned(delta, decimals)}${pct}`;
-    renderScale(before.value, after.value, decimals);
-  }
-
-  const o = s.observations;
-  const moved = o.changed + o.appeared + o.disappeared;
-  $("shift-observations").textContent = `${moved} moved · ${o.unchanged} held`;
-  $("shift-duration").textContent = `${(result.durationMs / 1000).toFixed(2)} s`;
-  return numeric ? { before: before.value, after: after.value, decimals: Math.max(decimalsOf(before.value), decimalsOf(after.value)) } : null;
-}
-
-function renderScale(before, after, decimals) {
-  const lo0 = Math.min(before, after);
-  const hi0 = Math.max(before, after);
+function renderScale(shift) {
+  const lo0 = Math.min(shift.before, shift.after);
+  const hi0 = Math.max(shift.before, shift.after);
   const range = hi0 - lo0 || Math.abs(hi0) || 1;
   const step = nicestep(range / 3);
   const lo = Math.floor((lo0 - range * 0.45) / step) * step;
@@ -169,16 +173,16 @@ function renderScale(before, after, decimals) {
   const scale = $("scale");
   scale.hidden = false;
   scale.style.setProperty("--ticks", String(Math.round((hi - lo) / step) * 5));
-  $("marker-base").style.setProperty("--pos", `${pos(before)}%`);
-  $("marker-current").style.setProperty("--pos", `${pos(after)}%`);
-  $("marker-current").style.setProperty("--start", `${pos(before)}%`);
+  $("marker-base").style.setProperty("--pos", `${pos(shift.before)}%`);
+  $("marker-current").style.setProperty("--pos", `${pos(shift.after)}%`);
+  $("marker-current").style.setProperty("--start", `${pos(shift.before)}%`);
   const bracket = $("scale-bracket");
   bracket.style.setProperty("--from", `${pos(lo0)}%`);
   bracket.style.setProperty("--to", `${pos(hi0)}%`);
-  bracket.classList.toggle("is-falling", after < before);
+  bracket.classList.toggle("is-falling", shift.after < shift.before);
 
   const labels = [];
-  const labelDecimals = Math.max(decimals, decimalsOf(step));
+  const labelDecimals = Math.max(shift.decimals, decimalsOf(step));
   for (let v = lo; v <= hi + step / 2; v += step) {
     const label = el("span", { text: formatNumber(v, labelDecimals) });
     label.style.setProperty("--pos", `${pos(v)}%`);
@@ -189,55 +193,59 @@ function renderScale(before, after, decimals) {
 
 function resetReadout() {
   for (const id of ["num-before", "num-after", "shift-delta", "shift-observations", "shift-duration"]) $(id).textContent = "—";
-  $("raw-before").textContent = "";
-  $("raw-after").textContent = "";
+  for (const id of ["raw-before", "raw-after", "shift-pct"]) $(id).textContent = "";
   $("scale").hidden = true;
-  $("readout").classList.remove("is-verbatim");
+  const readout = $("readout");
+  readout.classList.remove("is-verbatim", "show-base", "show-current", "show-shift", "is-locked");
+  $("readout-mode").textContent = "Verdict";
   $("case-id").textContent = "—";
   $("case-id").removeAttribute("title");
 }
 
-/** Counts the current numeral from baseline to its measured value. Final text is always the real value. */
-function animateCounter(measure, delayMs) {
-  if (!measure || reducedMotion.matches) return;
-  const node = $("num-after");
-  const finalText = node.textContent;
-  const duration = 520;
-  node.textContent = formatNumber(measure.before, measure.decimals);
-  setTimeout(() => {
-    const start = performance.now();
-    const frame = (now) => {
-      const t = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3);
-      const v = measure.before + (measure.after - measure.before) * eased;
-      node.textContent = t < 1 ? formatNumber(v, measure.decimals) : finalText;
-      if (t < 1) requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  }, delayMs);
+/** Counts a node from one value to another; the final text is always the real value. */
+function countTo(node, from, to, decimals, format, finalText, durationMs) {
+  if (reducedMotion.matches) {
+    node.textContent = finalText;
+    return;
+  }
+  const start = performance.now();
+  const frame = (now) => {
+    const t = Math.min((now - start) / durationMs, 1);
+    const eased = 1 - Math.pow(1 - t, 3);
+    node.textContent = t < 1 ? format(from + (to - from) * eased, decimals) : finalText;
+    if (t < 1) requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
 }
 
-/* ── Investigation chain ────────────────────────────────────────────────── */
+/* ── Investigation rail and sequence ────────────────────────────────────── */
 
-function setChain(id, state, value) {
+function setRail(id, state, word, value) {
   const step = $(id);
   step.dataset.state = state;
-  step.querySelector(".chain-value").textContent = value;
+  step.querySelector(".rail-word").textContent = word;
+  step.querySelector(".rail-value").textContent = value;
 }
 
-function renderChain(result) {
-  const s = result.summary;
-  const files = (result.findings.changeSurface && result.findings.changeSurface.files) || [];
-  setChain("chain-code", files.length ? "observed" : "idle", files.length ? `${files.length} file${files.length === 1 ? "" : "s"} · ${files.map((f) => f.path).join(", ")}` : "no Git change");
-  setChain("chain-tests", s.tests.result === "PASS" ? "pass" : "fault", `${s.tests.result} · ${s.tests.changed ? "changed" : "unchanged"}`);
-  setChain("chain-behavior", s.behavior.changed ? "changed" : "pass", s.behavior.changed ? `CHANGED · ${s.behavior.workflowId}` : `unchanged · ${s.behavior.workflowId}`);
-  const evidenceCount = s.evidence.baseline.length + s.evidence.current.length;
-  setChain("chain-evidence", "observed", `${evidenceCount} records · ${s.evidence.baseline.length} baseline + ${s.evidence.current.length} current`);
-  setChain("chain-causality", "withheld", s.causality === "not_established" ? "not established" : s.causality);
+function resetRail() {
+  for (const id of ["rail-change", "rail-execution", "rail-behavior", "rail-evidence", "rail-causality"]) setRail(id, "idle", "—", "—");
 }
 
-function resetChain() {
-  for (const id of ["chain-code", "chain-tests", "chain-behavior", "chain-evidence", "chain-causality"]) setChain(id, "idle", "—");
+function sequenceItem(step) {
+  return $("sequence").querySelector(`[data-step="${step}"]`);
+}
+
+function setSequenceStep(step, state, value) {
+  const item = sequenceItem(step);
+  item.dataset.state = state;
+  if (value !== undefined) item.querySelector(".seq-value").textContent = value;
+}
+
+function resetSequence() {
+  for (const item of $("sequence").children) {
+    item.dataset.state = "pending";
+    item.querySelector(".seq-value").textContent = "—";
+  }
 }
 
 /* ── Copyable evidence IDs ──────────────────────────────────────────────── */
@@ -265,14 +273,18 @@ async function copyText(text) {
   return ok;
 }
 
-function evidenceChip(evidenceId) {
-  const button = el("button", { type: "button", className: "chip", "aria-label": `Copy evidence ID ${evidenceId}`, title: "Copy evidence ID" }, [
-    el("span", { className: "chip-id", text: evidenceId }),
+function copyButton(evidenceId) {
+  const button = el("button", { type: "button", className: "chip", "aria-label": `Copy evidence ID ${evidenceId}`, title: evidenceId }, [
+    el("span", { className: "chip-id", text: shortEvidenceId(evidenceId) }),
     el("span", { className: "chip-action", "aria-hidden": "true", text: "Copy" }),
   ]);
   button.addEventListener("click", async () => {
     const ok = await copyText(evidenceId);
-    if (!ok) window.getSelection().selectAllChildren(button.querySelector(".chip-id"));
+    const idNode = button.querySelector(".chip-id");
+    if (!ok) {
+      idNode.textContent = evidenceId;
+      window.getSelection().selectAllChildren(idNode);
+    }
     button.dataset.copied = ok ? "true" : "false";
     button.querySelector(".chip-action").textContent = ok ? "Copied" : "Select";
     $("copy-status").textContent = ok ? `Copied ${evidenceId}` : `Clipboard unavailable — ${evidenceId} is selected; press Ctrl+C or ⌘C`;
@@ -284,7 +296,7 @@ function evidenceChip(evidenceId) {
   return button;
 }
 
-/* ── Case file: findings ────────────────────────────────────────────────── */
+/* ── Evidence index shared by the finding and the ledger ────────────────── */
 
 function previewText(side) {
   if (!side) return "(no record)";
