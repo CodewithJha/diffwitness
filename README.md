@@ -217,4 +217,4 @@ See [docs/ROADMAP.md](docs/ROADMAP.md) and the [changelog](CHANGELOG.md).
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE)
